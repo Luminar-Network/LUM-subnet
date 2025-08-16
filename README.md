@@ -1,12 +1,502 @@
-<div align="center">
-
 # **Luminar Subnet** <!-- omit in toc -->
+
 [![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/bittensor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
 ---
 
-## The Incentivized Internet <!-- omit in toc -->
+## The Decentralized Crime Intelligence Platform <!-- omit in toc -->
+
+[Luminar](https://luminar.ai) is a revolutionary Bittensor subnet that transforms how crime data is collected, processed, and utilized. By leveraging decentralized intelligence and community-driven reporting, Luminar creates the world's first incentivized crime intelligence network.
+
+### **Core Mission**
+
+Luminar solves the critical problem of **fragmented, unstructured, and underutilized crime data** by creating a decentralized intelligence platform that:
+
+- **Crowdsources** crime incident reports from community members
+- **Verifies** data authenticity through multi-layered consensus
+- **Processes** raw reports into structured, actionable intelligence
+- **Incentivizes** quality contributions with $TAO rewards
+
+---
+
+## Table of Contents <!-- omit in toc -->
+
+- [🎯 Problem Statement](#-problem-statement)
+- [🏗️ Architecture Overview](#️-architecture-overview)
+- [👥 Network Participants](#-network-participants)
+- [🔄 Data Flow](#-data-flow)
+- [🏆 Incentive Mechanism](#-incentive-mechanism)
+- [📋 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+- [🔧 Configuration](#-configuration)
+- [🧪 Testing](#-testing)
+- [📊 Monitoring](#-monitoring)
+- [🤝 Contributing](#-contributing)
+- [📜 License](#-license)
+
+---
+
+## 🎯 Problem Statement
+
+Traditional crime data systems suffer from:
+
+- **Fragmentation**: Data scattered across multiple agencies and platforms
+- **Delays**: Incident reporting and processing can take days or weeks
+- **Incompleteness**: Many crimes go unreported or lack sufficient detail
+- **Accessibility**: Limited public access to actionable crime intelligence
+- **Quality**: Inconsistent data standards and verification processes
+
+### Luminar's Solution
+
+Luminar creates a **real-time, community-driven crime intelligence network** that:
+
+1. **Democratizes** crime reporting through mobile-first applications
+2. **Incentivizes** quality data submission with cryptocurrency rewards
+3. **Processes** reports using advanced AI for clustering and verification
+4. **Delivers** structured intelligence for risk assessment and prevention
+
+---
+
+## 🏗️ Architecture Overview
+
+Luminar operates as a **three-layer decentralized network**:
+
+```mermaid
+graph TB
+    subgraph "Layer 1: Data Collection"
+        A[Mobile App Users] --> B[Raw Incident Reports]
+        B --> C[Geotag + Timestamp + Media]
+    end
+    
+    subgraph "Layer 2: Processing (Miners)"
+        D[Semantic Clustering] --> E[AI Models]
+        E --> F[Crime Event Objects]
+        C --> D
+    end
+    
+    subgraph "Layer 3: Validation"
+        G[Data Integrity Checks] --> H[Consensus Scoring]
+        H --> I[Weight Distribution]
+        F --> G
+    end
+    
+    subgraph "Layer 4: Intelligence"
+        J[Verified Events Database] --> K[Risk Analysis Engine]
+        K --> L[Predictive Heatmaps]
+        I --> J
+    end
+```
+
+### Key Components
+
+- **PostgreSQL Database**: Stores verified crime events and metadata
+- **AI Processing Pipeline**: Semantic clustering, multimodal analysis (CLIP)
+- **Consensus Engine**: Bittensor's Yuma Consensus for quality assurance
+- **API Layer**: Real-time access for applications and services
+
+---
+
+## 👥 Network Participants
+
+### 🔸 **Data Contributors (Users)**
+- **Role**: Submit incident reports via mobile/web applications
+- **Rewards**: Micro-bounties in $TAO for valid, non-duplicate reports
+- **Requirements**: Geolocation, timestamp, incident description
+- **Verification**: Account verification, media authenticity checks
+
+### ⛏️ **Miners**
+- **Role**: Process raw reports into structured crime events
+- **Technology**: AI models for semantic clustering and multimodal processing
+- **Output**: Clean, machine-readable crime event objects
+- **Evaluation**: Clustering accuracy, data integrity, processing speed
+
+### ✅ **Validators**
+- **Role**: Verify miner outputs and maintain data quality
+- **Responsibilities**:
+  - Cross-check timestamps and geotags
+  - Verify media authenticity
+  - Score clustering accuracy
+  - Detect duplicates and fraud
+- **Rewards**: Based on consensus accuracy and diligence
+
+---
+
+## 🔄 Data Flow
+
+### 1. **Incident Reporting**
+```
+User App → Raw Report → Metadata Tagging → Queue for Processing
+```
+
+### 2. **AI Processing**
+```
+Raw Reports → Semantic Analysis → Clustering → Event Generation
+```
+
+### 3. **Validation & Consensus**
+```
+Crime Events → Integrity Checks → Quality Scoring → Weight Updates
+```
+
+### 4. **Intelligence Output**
+```
+Verified Events → Database Storage → API Access → Risk Analytics
+```
+
+---
+
+## 🏆 Incentive Mechanism
+
+Luminar uses a **multi-tiered reward system** that incentivizes quality at every level:
+
+### Reward Distribution
+
+| Participant | Reward Basis | Weight |
+|-------------|--------------|---------|
+| **Data Contributors** | Valid report submissions | Micro-bounties |
+| **Miners** | Processing accuracy & speed | 40% Clustering + 30% Integrity |
+| **Validators** | Consensus accuracy | Verification quality |
+
+### Scoring Criteria for Miners
+
+1. **Data Integrity (30%)**
+   - Timestamp/geotag consistency
+   - Media authenticity verification
+   - Source report validation
+
+2. **Clustering Accuracy (40%)**
+   - Semantic similarity of grouped reports
+   - Event type classification accuracy
+   - Clustering completeness
+
+3. **Novelty & Redundancy (20%)**
+   - Duplicate detection
+   - Novel event identification
+   - Quality over quantity
+
+4. **Processing Quality (10%)**
+   - Summary completeness
+   - Metadata richness
+   - Processing efficiency
+
+### Anti-Sybil Measures
+
+- **Economic Staking**: $TAO cost for network participation
+- **Slashing Mechanism**: Penalties for false or misleading data
+- **Dynamic Reputation**: Continuous performance-based weighting
+- **Media Verification**: Hash-based authenticity checks
+
+---
+
+## 📋 Installation
+
+### Prerequisites
+
+- Python 3.9+
+- PostgreSQL 13+
+- CUDA-capable GPU (recommended for AI models)
+- 16GB+ RAM
+- 100GB+ storage
+
+### System Dependencies
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib python3-pip git
+
+# macOS
+brew install postgresql python git
+```
+
+### Install Luminar Subnet
+
+```bash
+# Clone the repository
+git clone https://github.com/khemrajregmi/Luminar-subnet.git
+cd Luminar-subnet
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+```
+
+### Database Setup
+
+```bash
+# Create database
+sudo -u postgres createdb luminar_subnet
+
+# Run migrations (when available)
+# python scripts/setup_database.py
+```
+
+---
+
+## 🚀 Quick Start
+
+### Running a Miner
+
+```bash
+# Basic miner setup
+python neurons/luminar_miner.py \
+    --netuid 1 \
+    --wallet.name miner \
+    --wallet.hotkey default \
+    --logging.debug
+
+# With custom configuration
+python neurons/luminar_miner.py \
+    --netuid 1 \
+    --wallet.name miner \
+    --wallet.hotkey default \
+    --blacklist.min_stake_threshold 1000 \
+    --neuron.name luminar_miner \
+    --logging.debug
+```
+
+### Running a Validator
+
+```bash
+# Basic validator setup
+python neurons/luminar_validator.py \
+    --netuid 1 \
+    --wallet.name validator \
+    --wallet.hotkey default \
+    --logging.debug
+
+# With custom parameters
+python neurons/luminar_validator.py \
+    --netuid 1 \
+    --wallet.name validator \
+    --wallet.hotkey default \
+    --neuron.sample_size 20 \
+    --neuron.timeout 300 \
+    --logging.debug
+```
+
+### Development Mode (Local Testing)
+
+```bash
+# Run with mock subtensor
+python neurons/luminar_miner.py \
+    --subtensor.network mock \
+    --wallet.name test_miner \
+    --logging.debug
+
+python neurons/luminar_validator.py \
+    --subtensor.network mock \
+    --wallet.name test_validator \
+    --logging.debug
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file:
+
+```env
+# Database Configuration
+DATABASE_URL=postgresql://username:password@localhost/luminar_subnet
+POSTGRES_DB=luminar_subnet
+POSTGRES_USER=luminar
+POSTGRES_PASSWORD=secure_password
+
+# API Configuration
+API_BASE_URL=https://api.luminar.ai
+API_KEY=your_api_key_here
+
+# AI Model Configuration
+HUGGINGFACE_TOKEN=your_hf_token
+OPENAI_API_KEY=your_openai_key  # Optional
+
+# Network Configuration
+SUBNET_NETUID=1
+MIN_STAKE_THRESHOLD=1000
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=luminar_subnet.log
+```
+
+### Advanced Configuration
+
+```python
+# config/luminar_config.py
+LUMINAR_CONFIG = {
+    "processing": {
+        "max_batch_size": 50,
+        "clustering_threshold": 0.7,
+        "confidence_threshold": 0.3,
+        "max_processing_time": 300
+    },
+    "validation": {
+        "integrity_weight": 0.30,
+        "clustering_weight": 0.40,
+        "novelty_weight": 0.20,
+        "quality_weight": 0.10
+    },
+    "database": {
+        "connection_pool_size": 20,
+        "query_timeout": 30,
+        "backup_interval": 3600
+    }
+}
+```
+
+---
+
+## 🧪 Testing
+
+### Unit Tests
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run specific test categories
+python -m pytest tests/test_protocol.py -v
+python -m pytest tests/test_miner.py -v
+python -m pytest tests/test_validator.py -v
+```
+
+### Integration Tests
+
+```bash
+# Test miner-validator interaction
+python -m pytest tests/integration/ -v
+
+# Test with mock data
+python scripts/test_with_synthetic_data.py
+```
+
+### Performance Testing
+
+```bash
+# Benchmark processing speed
+python scripts/benchmark_processing.py
+
+# Load testing
+python scripts/load_test.py --miners 10 --reports 1000
+```
+
+---
+
+## 📊 Monitoring
+
+### Key Metrics
+
+- **Processing Throughput**: Reports processed per hour
+- **Clustering Accuracy**: Semantic similarity scores
+- **Validation Accuracy**: Consensus quality metrics
+- **Network Health**: Active miners/validators
+- **Data Quality**: Verified events percentage
+
+### Monitoring Tools
+
+```bash
+# View real-time metrics
+python scripts/monitor_subnet.py
+
+# Export metrics to Prometheus
+python scripts/prometheus_exporter.py
+
+# Generate performance reports
+python scripts/generate_report.py --timeframe 24h
+```
+
+### Dashboard Access
+
+- **Grafana Dashboard**: http://localhost:3000/luminar
+- **Subnet Stats**: https://stats.luminar.ai
+- **Real-time Feed**: https://live.luminar.ai
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Here's how to get involved:
+
+### Development Workflow
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+3. **Commit** your changes: `git commit -m 'Add amazing feature'`
+4. **Push** to the branch: `git push origin feature/amazing-feature`
+5. **Open** a Pull Request
+
+### Areas for Contribution
+
+- **AI Models**: Improve clustering and classification algorithms
+- **Data Verification**: Enhance authenticity detection
+- **Mobile Apps**: Build user-friendly reporting interfaces
+- **Analytics**: Develop predictive crime models
+- **Documentation**: Improve guides and tutorials
+
+### Code Standards
+
+- Follow PEP 8 for Python code
+- Include comprehensive docstrings
+- Add unit tests for new features
+- Update documentation as needed
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🔗 Additional Resources
+
+- **Website**: [https://luminar.ai](https://luminar.ai)
+- **Documentation**: [https://docs.luminar.ai](https://docs.luminar.ai)
+- **API Reference**: [https://api.luminar.ai/docs](https://api.luminar.ai/docs)
+- **Discord**: [Join our community](https://discord.gg/luminar)
+- **Twitter**: [@LuminarAI](https://twitter.com/LuminarAI)
+
+---
+
+## 🎯 Roadmap
+
+### Phase 1: Foundation (Current)
+- ✅ Core subnet infrastructure
+- ✅ Basic AI processing pipeline
+- ✅ Validation and consensus mechanism
+- 🔄 Initial testing and deployment
+
+### Phase 2: Enhancement (Q1 2025)
+- 📱 Mobile application development
+- 🤖 Advanced AI models (CLIP, transformers)
+- 🗄️ Production database deployment
+- 🔐 Enhanced security measures
+
+### Phase 3: Scale (Q2 2025)
+- 🌍 Multi-city deployment
+- 📊 Real-time analytics dashboard
+- 🔌 Third-party API integrations
+- 💼 B2B partnerships
+
+### Phase 4: Intelligence (Q3 2025)
+- 🧠 Predictive crime modeling
+- 🗺️ Dynamic risk heatmaps
+- 📈 Market intelligence platform
+- 🌐 International expansion
+
+---
+
+*Built with ❤️ for a safer world through decentralized intelligence*
 
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
 </div>
