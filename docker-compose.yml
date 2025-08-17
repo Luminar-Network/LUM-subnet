@@ -1,0 +1,111 @@
+# Docker Compose for Luminar Subnet Database
+# Copyright © 2025 Luminar Network
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with PostGIS
+  luminar-db:
+    image: postgis/postgis:15-3.3
+    container_name: luminar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: luminar_local
+      POSTGRES_USER: luminar_dev
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - luminar_db_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - luminar-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U luminar_dev -d luminar_local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test Database (separate for testing)
+  luminar-test-db:
+    image: postgis/postgis:15-3.3
+    container_name: luminar-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: luminar_test
+      POSTGRES_USER: luminar_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - luminar_test_db_data:/var/lib/postgresql/data
+    networks:
+      - luminar-network
+    profiles:
+      - testing
+
+  # Redis for Caching (Optional)
+  luminar-redis:
+    image: redis:7-alpine
+    container_name: luminar-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - luminar_redis_data:/data
+    networks:
+      - luminar-network
+    command: redis-server --appendonly yes
+    profiles:
+      - cache
+
+  # Grafana for Monitoring (Optional)
+  luminar-grafana:
+    image: grafana/grafana:latest
+    container_name: luminar-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: luminar_admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - luminar_grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - luminar-network
+    profiles:
+      - monitoring
+
+  # Prometheus for Metrics (Optional)
+  luminar-prometheus:
+    image: prom/prometheus:latest
+    container_name: luminar-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - luminar_prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - luminar-network
+    profiles:
+      - monitoring
+
+networks:
+  luminar-network:
+    driver: bridge
+
+volumes:
+  luminar_db_data:
+    driver: local
+  luminar_test_db_data:
+    driver: local
+  luminar_redis_data:
+    driver: local
+  luminar_grafana_data:
+    driver: local
+  luminar_prometheus_data:
+    driver: local
