@@ -7,7 +7,7 @@
 
 ## The Decentralized Crime Intelligence Platform <!-- omit in toc -->
 
-![Luminar Network Platform](https://luminar.network/images/platform-overview.jpg)
+![Luminar Network Platform](https://luminar.network/images/analytics.jpg)
 
 [Luminar](https://luminar.network/) is a revolutionary Bittensor subnet that transforms how crime data is collected, processed, and utilized. By leveraging decentralized intelligence and community-driven reporting, Luminar creates the world's first incentivized crime intelligence network.
 
@@ -64,7 +64,6 @@ Luminar creates a **real-time, community-driven crime intelligence network** tha
 
 Luminar operates as a **four-layer decentralized network** with complete user-to-intelligence flow:
 
-![Luminar Analytics Dashboard](https://luminar.network/images/analytics.jpg)
 
 ```mermaid
 graph TB
