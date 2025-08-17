@@ -230,7 +230,7 @@ class LuminarValidator(BaseValidatorNeuron):
                 text_description=random.choice(incident["descriptions"]),
                 geotag={"lat": location["lat"], "lng": location["lng"]},
                 timestamp=datetime.now() - timedelta(minutes=random.randint(10, 1440)),  # Last 24 hours
-                media_urls=[f"https://storage.luminar.ai/media/{uuid.uuid4().hex}.jpg"] if random.random() < 0.3 else [],
+                media_urls=[f"https://storage.luminar.network/media/{uuid.uuid4().hex}.jpg"] if random.random() < 0.3 else [],
                 media_hashes=[hashlib.sha256(f"media_{i}".encode()).hexdigest()] if random.random() < 0.3 else [],
                 user_id=f"user_{random.randint(1000, 9999)}",
                 metadata={"incident_type": incident["type"], "location_name": location.get("city")}

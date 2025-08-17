@@ -7,7 +7,7 @@
 
 ## The Decentralized Crime Intelligence Platform <!-- omit in toc -->
 
-[Luminar](https://luminar.ai) is a revolutionary Bittensor subnet that transforms how crime data is collected, processed, and utilized. By leveraging decentralized intelligence and community-driven reporting, Luminar creates the world's first incentivized crime intelligence network.
+[Luminar](https://luminar.network/) is a revolutionary Bittensor subnet that transforms how crime data is collected, processed, and utilized. By leveraging decentralized intelligence and community-driven reporting, Luminar creates the world's first incentivized crime intelligence network.
 
 ### **Core Mission**
 
@@ -313,7 +313,7 @@ POSTGRES_USER=luminar
 POSTGRES_PASSWORD=secure_password
 
 # API Configuration
-API_BASE_URL=https://api.luminar.ai
+API_BASE_URL=https://api.luminar.network/
 API_KEY=your_api_key_here
 
 # AI Model Configuration
@@ -418,8 +418,8 @@ python scripts/generate_report.py --timeframe 24h
 ### Dashboard Access
 
 - **Grafana Dashboard**: http://localhost:3000/luminar
-- **Subnet Stats**: https://stats.luminar.ai
-- **Real-time Feed**: https://live.luminar.ai
+- **Subnet Stats**: https://stats.luminar.network/
+- **Real-time Feed**: https://live.luminar.network/
 
 ---
 
@@ -460,9 +460,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Additional Resources
 
-- **Website**: [https://luminar.ai](https://luminar.ai)
-- **Documentation**: [https://docs.luminar.ai](https://docs.luminar.ai)
-- **API Reference**: [https://api.luminar.ai/docs](https://api.luminar.ai/docs)
+- **Website**: [https://luminar.network/](https://luminar.network/)
+- **Documentation**: [https://docs.luminar.network/](https://docs.luminar.network/)
+- **API Reference**: [https://api.luminar.network/docs](https://api.luminar.network/docs)
 - **Discord**: [Join our community](https://discord.gg/luminar)
 - **Twitter**: [@LuminarAI](https://twitter.com/LuminarAI)
 

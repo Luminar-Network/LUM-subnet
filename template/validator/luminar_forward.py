@@ -242,7 +242,7 @@ async def prepare_incident_reports() -> List[RawIncidentReport]:
             media_count = random.randint(1, 3)
             for j in range(media_count):
                 media_id = uuid.uuid4().hex[:12]
-                media_urls.append(f"https://storage.luminar.ai/evidence/{media_id}.jpg")
+                media_urls.append(f"https://storage.luminar.network/evidence/{media_id}.jpg")
                 media_hashes.append(f"sha256:{uuid.uuid4().hex}")
         
         report = RawIncidentReport(
