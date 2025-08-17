@@ -9,7 +9,8 @@ setuptools>=68
 
 # Luminar-specific dependencies
 # Database
-psycopg2-binary>=2.9.0  # PostgreSQL adapter
+asyncpg>=0.28.0         # Async PostgreSQL adapter
+psycopg2-binary>=2.9.0  # Sync PostgreSQL adapter (backup)
 sqlalchemy>=2.0.0       # ORM for database operations
 
 # AI/ML for crime data processing  
@@ -19,9 +20,16 @@ sentence-transformers>=2.2.0  # Semantic embeddings
 pillow>=9.0.0           # Image processing
 opencv-python>=4.8.0    # Computer vision
 
+# Visual processing for media analysis
+torch>=2.0.0            # PyTorch for AI models
+torchvision>=0.15.0     # Computer vision models
+clip-by-openai>=1.0     # CLIP for image understanding  
+ftfy>=6.1.0             # Text processing for CLIP
+regex>=2023.6.3         # Regex utilities
+
 # Data processing
 pandas>=2.0.0           # Data manipulation
-geopy>=2.3.0            # Geographic calculations
+geopy>=2.3.0            # Geographic calculations for duplicate detection
 python-dateutil>=2.8.0  # Date/time utilities
 
 # Web and API
