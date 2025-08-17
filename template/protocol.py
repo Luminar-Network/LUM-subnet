@@ -28,9 +28,38 @@ from typing import List, Optional, Dict, Any
 # in the Luminar decentralized intelligence platform.
 
 @dataclass
+class MediaUpload:
+    """
+    Media file uploaded by user with metadata
+    """
+    media_id: str  # Unique ID for this upload
+    media_type: str  # "image", "video", "audio"
+    media_url: str  # URL to access the media
+    media_hash: str  # Content hash for verification
+    content_description: str  # Text description from user
+    file_size: int  # Size in bytes
+    mime_type: str  # e.g., "image/jpeg", "video/mp4"
+    upload_timestamp: datetime
+
+@dataclass
+class UserSubmission:
+    """
+    Complete user submission with text, media, and metadata
+    """
+    submission_id: str  # Unique ID for this submission
+    text_description: str  # User's text description
+    geotag: Dict[str, float]  # {"lat": float, "lng": float}
+    timestamp: datetime  # When incident occurred
+    submission_timestamp: datetime  # When user submitted
+    user_id: str  # Anonymous user identifier
+    media_files: List[MediaUpload] = None  # Associated media
+    metadata: Dict[str, Any] = None  # Additional metadata
+    verification_status: str = "pending"  # pending, processing, verified, rejected
+
+@dataclass
 class RawIncidentReport:
     """
-    A raw incident report submitted by users.
+    A raw incident report submitted by users (legacy compatibility).
     """
     report_id: str
     text_description: str
@@ -40,6 +69,36 @@ class RawIncidentReport:
     media_hashes: List[str] = None  # Content hashes for verification
     user_id: str = None
     metadata: Dict[str, Any] = None
+
+@dataclass
+class ProcessedEvent:
+    """
+    Event created by miner from text and visual analysis
+    """
+    event_id: str
+    generated_summary: str  # e.g., "truck and motorbike accident near balaju at 4pm, June 11"
+    event_type: str  # accident, theft, assault, etc.
+    confidence_score: float  # 0.0 to 1.0
+    extracted_entities: Dict[str, Any]  # {"vehicles": ["truck", "motorbike"], "location": "balaju", "time": "4pm"}
+    visual_analysis: Dict[str, Any]  # Results from image/video processing
+    source_submissions: List[str]  # List of submission IDs used
+    processing_timestamp: datetime
+    miner_uid: int  # UID of processing miner
+
+@dataclass 
+class ValidationResult:
+    """
+    Result of validator comparing miner event with user metadata
+    """
+    validation_id: str
+    event_id: str
+    submission_id: str
+    metadata_consistency: Dict[str, float]  # Scores for timestamp, geotag, etc.
+    visual_authenticity: float  # Score for media authenticity
+    duplicate_detection: bool  # Is this a duplicate?
+    overall_score: float  # Final validation score
+    validator_uid: int
+    validation_timestamp: datetime
 
 @dataclass
 class CrimeEvent:
@@ -58,45 +117,73 @@ class CrimeEvent:
     verified: bool = False
     verification_metadata: Dict[str, Any] = None
 
-class DataProcessingRequest(bt.Synapse):
+# Luminar Subnet Communication Protocols
 
-import typing
-import bittensor as bt
+class MediaProcessingRequest(bt.Synapse):
+    """
+    Validator -> Miner: Send user submissions with media for processing
+    
+    This implements your desired flow:
+    1. Validator receives user submissions with media + metadata
+    2. Validator sends to miner for processing
+    3. Miner analyzes text + visuals, creates events, filters duplicates
+    4. Validator compares results with original metadata
+    """
+    
+    # Request input (filled by validator)
+    user_submissions: List[UserSubmission]  # User uploads with media + metadata
+    task_id: str
+    processing_deadline: datetime
+    requirements: Dict[str, Any] = None  # Special processing requirements
+    
+    # Response output (filled by miner)
+    processed_events: Optional[List[ProcessedEvent]] = None
+    duplicate_flags: Optional[List[str]] = None  # IDs of detected duplicates
+    processing_metadata: Optional[Dict[str, Any]] = None
+    processing_time: Optional[float] = None
+    
+    def deserialize(self) -> List[ProcessedEvent]:
+        """
+        Deserialize the processed events from miner
+        """
+        return self.processed_events or []
 
-# TODO(developer): Rewrite with your protocol definition.
+class ValidationRequest(bt.Synapse):
+    """
+    Validator internal: Compare miner events with user metadata
+    
+    Validates:
+    - Timestamp consistency
+    - Geotag accuracy  
+    - Visual authenticity
+    - Duplicate detection
+    """
+    
+    # Request input
+    miner_events: List[ProcessedEvent]
+    original_submissions: List[UserSubmission]
+    validation_criteria: Dict[str, float]  # Thresholds for validation
+    
+    # Response output
+    validation_results: Optional[List[ValidationResult]] = None
+    overall_scores: Optional[Dict[str, float]] = None
+    
+    def deserialize(self) -> List[ValidationResult]:
+        """
+        Deserialize validation results
+        """
+        return self.validation_results or []
 
-# This is the protocol for the dummy miner and validator.
-# It is a simple request-response protocol where the validator sends a request
-# to the miner, and the miner responds with a dummy response.
-
-# ---- miner ----
-# Example usage:
-#   def dummy( synapse: Dummy ) -> Dummy:
-#       synapse.dummy_output = synapse.dummy_input + 1
-#       return synapse
-#   axon = bt.axon().attach( dummy ).serve(netuid=...).start()
-
-# ---- validator ---
-# Example usage:
-#   dendrite = bt.dendrite()
-#   dummy_output = dendrite.query( Dummy( dummy_input = 1 ) )
-#   assert dummy_output == 2
-
-
-class Dummy(bt.Synapse):
 class DataProcessingRequest(bt.Synapse):
     """
-    Validator -> Miner: Request to process raw incident reports into structured crime events.
-    
-    Validators send batches of raw incident reports to miners for processing.
-    Miners respond with clustered and structured crime events.
+    Legacy: Validator -> Miner processing request (for compatibility)
     """
     
     # Required request input, filled by validator
     raw_reports: List[RawIncidentReport]
     task_id: str
     deadline: datetime
-    processing_requirements: Dict[str, Any] = None  # Special requirements for processing
+    processing_requirements: Dict[str, Any] = None
     
     # Optional response output, filled by miner
     processed_events: Optional[List[CrimeEvent]] = None
@@ -106,85 +193,14 @@ class DataProcessingRequest(bt.Synapse):
     def deserialize(self) -> List[CrimeEvent]:
         """
         Deserialize the processed crime events from the miner.
-        
-        Returns:
-        - List[CrimeEvent]: The clustered and structured crime events.
         """
         return self.processed_events or []
 
-
-class VerificationRequest(bt.Synapse):
-    """
-    Validator -> Validator: Request for cross-validation of crime events.
-    
-    Used for consensus building and verification of miner outputs.
-    """
-    
-    # Required request input
-    crime_events: List[CrimeEvent]
-    verification_type: str  # "data_integrity", "clustering_accuracy", "novelty_check"
-    validator_id: str
-    
-    # Optional response output
-    verification_results: Optional[Dict[str, Any]] = None
-    confidence_scores: Optional[Dict[str, float]] = None
-    
-    def deserialize(self) -> Dict[str, Any]:
-        """
-        Deserialize the verification results.
-        
-        Returns:
-        - Dict[str, Any]: The verification results and scores.
-        """
-        return self.verification_results or {}
-
-
-class ReputationQuery(bt.Synapse):
-    """
-    Query for miner reputation and performance metrics.
-    """
-    
-    # Required request input
-    miner_hotkey: str
-    time_range: Dict[str, datetime]  # {"start": datetime, "end": datetime}
-    
-    # Optional response output
-    reputation_score: Optional[float] = None
-    performance_metrics: Optional[Dict[str, Any]] = None
-    historical_data: Optional[Dict[str, Any]] = None
-    
-    def deserialize(self) -> Dict[str, Any]:
-        """
-        Deserialize the reputation and performance data.
-        
-        Returns:
-        - Dict[str, Any]: Combined reputation and performance metrics.
-        """
-        return {
-            "reputation_score": self.reputation_score,
-            "performance_metrics": self.performance_metrics,
-            "historical_data": self.historical_data
-        }
-
-
-# Legacy protocol for backward compatibility during migration
+# Legacy compatibility
 class Dummy(bt.Synapse):
-    """
-    Legacy dummy protocol for testing and migration purposes.
-    This will be deprecated once Luminar protocol is fully implemented.
-    """
-    
-    # Required request input, filled by sending dendrite caller.
+    """Legacy dummy protocol for testing"""
     dummy_input: int
-
-    # Optional request output, filled by receiving axon.
     dummy_output: typing.Optional[int] = None
-
+    
     def deserialize(self) -> int:
-        """
-        Deserialize the dummy output.
-        
-        Returns:
-        - int: The deserialized response.
-        """
         return self.dummy_output
