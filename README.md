@@ -101,22 +101,41 @@ graph TB
 
 ### Key Components
 
-- **Enhanced Protocol**: Complete user submission flow with media processing
+- **2-File Architecture**: Simplified `neurons/miner.py` and `neurons/validator.py`
+- **OpenAI Integration**: Enhanced AI processing with GPT-4 and Vision API
 - **PostgreSQL + PostGIS Database**: Geospatial crime data with advanced querying
-- **AI Processing Pipeline**: CLIP, BLIP, and transformer models for multimodal analysis
+- **AI Processing Pipeline**: OpenAI GPT, CLIP, BLIP, and transformer models for multimodal analysis
 - **Metadata Validation**: Timestamp, geotag, and content consistency checking
 - **Consensus Engine**: Bittensor's Yuma Consensus with custom scoring mechanisms
 - **Real-time API**: Live crime intelligence for applications and services
+- **Graceful Fallbacks**: CPU-only operation with rule-based processing
 
 ### Complete Flow Implementation
 
 1. **User Uploads**: Media (images/videos) + text description + metadata with unique ID
 2. **Validator Distribution**: Sends user submissions to miners for processing
-3. **Miner Processing**: AI analysis of text + visuals → structured events like "truck and motorbike accident near balaju at 4pm, June 11"
+3. **Miner Processing**: AI analysis using OpenAI GPT models or local fallbacks → structured events like "truck and motorbike accident near balaju at 4pm, June 11"
 4. **Duplicate Detection**: Filters redundant reports using similarity algorithms
 5. **Metadata Validation**: Compares miner events with original user metadata (timestamps, geotags)
 6. **Consensus & Scoring**: Updates miner weights based on validation accuracy
 7. **Intelligence Storage**: Verified events stored in geospatial database for analytics
+
+### AI Processing Capabilities
+
+**OpenAI Integration (Primary):**
+- **Text Analysis**: GPT-3.5-turbo/GPT-4 for enhanced incident classification
+- **Image Analysis**: GPT-4 Vision for scene understanding and object detection
+- **Structured Output**: JSON-formatted responses with confidence scoring
+
+**Local Fallbacks (Secondary):**
+- **BLIP Models**: Image captioning and object detection
+- **CLIP Models**: Visual-text similarity and embeddings
+- **Rule-based Processing**: Regex pattern matching for basic analysis
+
+**Graceful Degradation:**
+- Works without GPU (CPU-only operation)
+- Functions without OpenAI API key (uses local models)
+- Falls back to rule-based processing if all AI models unavailable
 
 ---
 
@@ -130,9 +149,10 @@ graph TB
 
 ### ⛏️ **Miners**
 - **Role**: Process raw reports into structured crime events
-- **Technology**: AI models for semantic clustering and multimodal processing
-- **Output**: Clean, machine-readable crime event objects
-- **Evaluation**: Clustering accuracy, data integrity, processing speed
+- **Technology**: OpenAI GPT models, CLIP, BLIP, and local AI models for multimodal processing
+- **Output**: Clean, machine-readable crime event objects with confidence scores
+- **Evaluation**: Event accuracy, metadata consistency, processing quality
+- **Requirements**: No GPU required (CPU-only operation supported)
 
 ### ✅ **Validators**
 - **Role**: Verify miner outputs and maintain data quality
@@ -217,10 +237,11 @@ Luminar uses a **multi-tiered reward system** that incentivizes quality at every
 ### Prerequisites
 
 - Python 3.9+
-- PostgreSQL 13+
-- CUDA-capable GPU (recommended for AI models)
-- 16GB+ RAM
-- 100GB+ storage
+- PostgreSQL 13+ (optional for local development)
+- **GPU NOT required** - CPU-only operation supported
+- 8GB+ RAM (16GB+ recommended for local AI models)
+- 50GB+ storage
+- OpenAI API key (optional for enhanced processing)
 
 ### System Dependencies
 
@@ -254,11 +275,32 @@ pip install -e .
 ### Database Setup
 
 ```bash
-# Create database
-sudo -u postgres createdb luminar_subnet
+# Quick testnet deployment (automated)
+./scripts/deploy_testnet.sh
 
-# Run migrations (when available)
-# python scripts/setup_database.py
+# Manual database setup (optional)
+python scripts/setup_test_database.py
+
+# Test database connectivity
+python scripts/test_database.py
+```
+
+### OpenAI Integration (Optional)
+
+```bash
+# Get your API key from https://platform.openai.com/api-keys
+export OPENAI_API_KEY="sk-your-key-here"
+
+# Or add to .env file
+echo "OPENAI_API_KEY=sk-your-key-here" >> .env
+
+# Test OpenAI integration
+python -c "
+import os
+from neurons.miner import Miner
+miner = Miner()
+print('✅ OpenAI available:', bool(miner.openai_client))
+"
 ```
 
 ---
@@ -269,14 +311,14 @@ sudo -u postgres createdb luminar_subnet
 
 ```bash
 # Basic miner setup
-python neurons/luminar_miner.py \
+python neurons/miner.py \
     --netuid 1 \
     --wallet.name miner \
     --wallet.hotkey default \
     --logging.debug
 
-# With custom configuration
-python neurons/luminar_miner.py \
+# With OpenAI integration
+OPENAI_API_KEY=sk-your-key python neurons/miner.py \
     --netuid 1 \
     --wallet.name miner \
     --wallet.hotkey default \
@@ -289,14 +331,14 @@ python neurons/luminar_miner.py \
 
 ```bash
 # Basic validator setup
-python neurons/luminar_validator.py \
+python neurons/validator.py \
     --netuid 1 \
     --wallet.name validator \
     --wallet.hotkey default \
     --logging.debug
 
 # With custom parameters
-python neurons/luminar_validator.py \
+python neurons/validator.py \
     --netuid 1 \
     --wallet.name validator \
     --wallet.hotkey default \
@@ -309,15 +351,19 @@ python neurons/luminar_validator.py \
 
 ```bash
 # Run with mock subtensor
-python neurons/luminar_miner.py \
+python neurons/miner.py \
     --subtensor.network mock \
     --wallet.name test_miner \
     --logging.debug
 
-python neurons/luminar_validator.py \
+python neurons/validator.py \
     --subtensor.network mock \
     --wallet.name test_validator \
     --logging.debug
+
+# Test with database scripts
+python scripts/test_database.py
+python scripts/setup_test_database.py
 ```
 
 ---
@@ -341,7 +387,11 @@ API_KEY=your_api_key_here
 
 # AI Model Configuration
 HUGGINGFACE_TOKEN=your_hf_token
-OPENAI_API_KEY=your_openai_key  # Optional
+OPENAI_API_KEY=your_openai_key_here  # Enhanced AI processing
+OPENAI_MODEL=gpt-3.5-turbo          # Text analysis model
+OPENAI_VISION_MODEL=gpt-4-vision-preview  # Image analysis
+OPENAI_MAX_TOKENS=500               # Response length limit
+OPENAI_TEMPERATURE=0.3              # Creativity level
 
 # Network Configuration
 SUBNET_NETUID=1
@@ -377,14 +427,63 @@ LUMINAR_CONFIG = {
 }
 ```
 
+### File Structure
+
+```
+luminar-subnet/
+├── neurons/
+│   ├── miner.py           # Consolidated Luminar miner
+│   └── validator.py       # Consolidated Luminar validator
+├── scripts/
+│   ├── deploy_testnet.sh  # Automated testnet deployment
+│   ├── setup_database.py # Production database setup
+│   ├── test_database.py  # Database testing
+│   └── README.md         # Scripts documentation
+├── template/
+│   ├── protocol.py       # Luminar protocol definitions
+│   ├── base/             # Base miner/validator classes
+│   └── utils/            # Utility functions
+├── docs/
+│   ├── COMPLETE_FLOW.md      # Complete implementation guide
+│   ├── OPENAI_INTEGRATION.md # OpenAI setup and usage
+│   ├── DATABASE.md           # Database architecture
+│   └── TESTNET_DEPLOYMENT.md # Deployment guide
+├── requirements.txt      # Python dependencies
+├── .env.testnet         # Testnet configuration
+├── .env.production      # Production configuration
+└── README.md           # This file
+```
+
 ---
 
 ## 🧪 Testing
 
+### Quick Testing
+
+```bash
+# Test database setup
+python scripts/test_database.py
+
+# Test miner functionality
+python -c "
+from neurons.miner import Miner
+miner = Miner()
+print('✅ Miner initializes successfully')
+print('📊 OpenAI available:', bool(getattr(miner, 'openai_client', None)))
+"
+
+# Test validator functionality  
+python -c "
+from neurons.validator import Validator
+validator = Validator()
+print('✅ Validator initializes successfully')
+"
+```
+
 ### Unit Tests
 
 ```bash
-# Run all tests
+# Run all tests (when available)
 python -m pytest tests/ -v
 
 # Run specific test categories
@@ -396,11 +495,12 @@ python -m pytest tests/test_validator.py -v
 ### Integration Tests
 
 ```bash
-# Test miner-validator interaction
-python -m pytest tests/integration/ -v
+# Test complete subnet flow
+python scripts/deploy_testnet.sh test
 
-# Test with mock data
-python scripts/test_with_synthetic_data.py
+# Test with database
+python scripts/setup_test_database.py
+python scripts/test_database.py
 ```
 
 ### Performance Testing
@@ -483,15 +583,31 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Additional Resources
 
+### 📚 **Documentation**
+- **Complete Flow Guide**: [docs/COMPLETE_FLOW.md](docs/COMPLETE_FLOW.md)
+- **OpenAI Integration**: [docs/OPENAI_INTEGRATION.md](docs/OPENAI_INTEGRATION.md)  
+- **Database Architecture**: [docs/DATABASE.md](docs/DATABASE.md)
+- **Testnet Deployment**: [docs/TESTNET_DEPLOYMENT.md](docs/TESTNET_DEPLOYMENT.md)
+- **Scripts Reference**: [scripts/README.md](scripts/README.md)
+
+### 🔗 **Links**
 - **Website**: [https://luminar.network/](https://luminar.network/)
-- **Documentation**: [https://docs.luminar.network/](https://docs.luminar.network/)
 - **API Reference**: [https://api.luminar.network/docs](https://api.luminar.network/docs)
 - **Discord**: [Join our community](https://discord.gg/luminar)
 - **Twitter**: [@LuminarAI](https://twitter.com/LuminarAI)
 
+### 🛠️ **Development Resources**
+- **Bittensor Docs**: [https://bittensor.com/documentation/](https://bittensor.com/documentation/)
+- **Yuma Consensus**: [https://bittensor.com/documentation/validating/yuma-consensus](https://bittensor.com/documentation/validating/yuma-consensus)
+- **OpenAI API**: [https://platform.openai.com/docs](https://platform.openai.com/docs)
+
 ---
 
 *Built with ❤️ for a safer world through decentralized intelligence*
+
+**Architecture:** 2-file consolidated subnet with OpenAI integration  
+**Status:** Production ready with CPU-only operation  
+**License:** MIT - see [LICENSE](LICENSE) file for details
 
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Research](https://bittensor.com/whitepaper)
 </div>

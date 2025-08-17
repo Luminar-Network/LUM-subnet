@@ -27,6 +27,7 @@ torchvision>=0.15.0     # Computer vision models
 clip-by-openai>=1.0     # CLIP for image understanding  
 ftfy>=6.1.0             # Text processing for CLIP
 regex>=2023.6.3         # Regex utilities
+openai>=1.0.0           # OpenAI API for enhanced text and image analysis
 
 # Data processing
 pandas>=2.0.0           # Data manipulation

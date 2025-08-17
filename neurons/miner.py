@@ -53,6 +53,14 @@ except ImportError:
             return torch.zeros(1, 77)
     clip = MockCLIP()
 
+# OpenAI integration for enhanced text and image analysis
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    bt.logging.warning("OpenAI not available - using rule-based processing")
+
 # Visual processing availability
 try:
     from transformers import BlipProcessor, BlipForConditionalGeneration
@@ -117,6 +125,9 @@ class Miner(BaseMinerNeuron):
         
         bt.logging.info("🚀 Initializing Luminar Media Processing Miner")
         
+        # Initialize OpenAI client
+        self._initialize_openai()
+        
         # Initialize AI models
         self._initialize_models()
         
@@ -133,6 +144,39 @@ class Miner(BaseMinerNeuron):
         }
         
         bt.logging.info("✅ Luminar Miner initialized successfully")
+    
+    def _initialize_openai(self):
+        """Initialize OpenAI client for enhanced text and image analysis"""
+        if not OPENAI_AVAILABLE:
+            bt.logging.info("🤖 OpenAI: Not available - using rule-based processing")
+            self.openai_client = None
+            return
+        
+        try:
+            # Get OpenAI API key from environment
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                bt.logging.warning("🔑 OPENAI_API_KEY not found in environment")
+                self.openai_client = None
+                return
+            
+            # Initialize OpenAI client
+            openai.api_key = api_key
+            self.openai_client = openai
+            
+            # Configuration from environment
+            self.openai_config = {
+                "model": os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo'),
+                "vision_model": os.getenv('OPENAI_VISION_MODEL', 'gpt-4-vision-preview'),
+                "max_tokens": int(os.getenv('OPENAI_MAX_TOKENS', 500)),
+                "temperature": float(os.getenv('OPENAI_TEMPERATURE', 0.3))
+            }
+            
+            bt.logging.info(f"🤖 OpenAI initialized: {self.openai_config['model']}")
+            
+        except Exception as e:
+            bt.logging.error(f"Failed to initialize OpenAI: {e}")
+            self.openai_client = None
     
     def _initialize_models(self):
         """Initialize AI models for text and visual processing"""
@@ -274,7 +318,7 @@ class Miner(BaseMinerNeuron):
     
     async def _analyze_text(self, text_description: str) -> Dict[str, Any]:
         """
-        Analyze text description using NLP
+        Analyze text description using OpenAI or rule-based NLP
         
         Extracts:
         - Event type (accident, theft, assault)
@@ -282,6 +326,72 @@ class Miner(BaseMinerNeuron):
         - Time references
         - Severity indicators
         """
+        # Try OpenAI first for enhanced analysis
+        if self.openai_client:
+            try:
+                return await self._analyze_text_with_openai(text_description)
+            except Exception as e:
+                bt.logging.warning(f"OpenAI analysis failed, falling back to rule-based: {e}")
+        
+        # Fallback to rule-based analysis
+        return await self._analyze_text_rule_based(text_description)
+    
+    async def _analyze_text_with_openai(self, text_description: str) -> Dict[str, Any]:
+        """Enhanced text analysis using OpenAI GPT models"""
+        
+        system_prompt = """You are an expert incident analyzer. Analyze the provided incident report and extract structured information.
+
+        Extract and return ONLY a JSON object with these fields:
+        {
+            "event_type": "accident|theft|assault|vandalism|suspicious|fire|medical|traffic|incident",
+            "entities": {
+                "vehicles": ["list of vehicles mentioned"],
+                "locations": ["list of locations mentioned"],
+                "times": ["list of times/temporal references"],
+                "people": ["list of people or groups mentioned"]
+            },
+            "severity": "low|medium|high",
+            "confidence": 0.0-1.0,
+            "summary": "concise incident summary"
+        }
+        
+        Focus on factual extraction, not speculation."""
+        
+        try:
+            response = await asyncio.to_thread(
+                self.openai_client.ChatCompletion.create,
+                model=self.openai_config["model"],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Incident report: {text_description}"}
+                ],
+                max_tokens=self.openai_config["max_tokens"],
+                temperature=self.openai_config["temperature"]
+            )
+            
+            # Parse JSON response
+            content = response.choices[0].message.content.strip()
+            if content.startswith('```json'):
+                content = content[7:-3].strip()
+            elif content.startswith('```'):
+                content = content[3:-3].strip()
+            
+            import json
+            analysis = json.loads(content)
+            
+            # Add original text and embedding
+            analysis["original_text"] = text_description
+            analysis["text_embedding"] = hashlib.md5(text_description.encode()).hexdigest()
+            
+            bt.logging.debug(f"🤖 OpenAI analysis: {analysis['event_type']} (confidence: {analysis.get('confidence', 0.0)})")
+            return analysis
+            
+        except Exception as e:
+            bt.logging.error(f"OpenAI text analysis error: {e}")
+            raise
+    
+    async def _analyze_text_rule_based(self, text_description: str) -> Dict[str, Any]:
+        """Fallback rule-based text analysis using regex patterns"""
         # Basic entity extraction using patterns
         entities = {}
         
@@ -401,7 +511,92 @@ class Miner(BaseMinerNeuron):
         return visual_analysis
     
     async def _analyze_image(self, media: Any) -> Optional[Dict[str, Any]]:
-        """Analyze single image using BLIP"""
+        """Analyze single image using OpenAI Vision or BLIP"""
+        
+        # Try OpenAI Vision first for enhanced analysis
+        if self.openai_client:
+            try:
+                return await self._analyze_image_with_openai(media)
+            except Exception as e:
+                bt.logging.warning(f"OpenAI Vision analysis failed, falling back to BLIP: {e}")
+        
+        # Fallback to BLIP analysis
+        return await self._analyze_image_with_blip(media)
+    
+    async def _analyze_image_with_openai(self, media: Any) -> Optional[Dict[str, Any]]:
+        """Enhanced image analysis using OpenAI GPT-4 Vision"""
+        
+        try:
+            # Download image
+            response = requests.get(media.url, timeout=10)
+            image_data = response.content
+            
+            # Convert to base64 for OpenAI
+            import base64
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+            
+            system_prompt = """You are an expert incident scene analyzer. Analyze this image and extract structured information.
+
+            Return ONLY a JSON object with these fields:
+            {
+                "caption": "detailed description of what you see",
+                "objects": ["list of objects/vehicles/people detected"],
+                "incident_type": "accident|theft|assault|vandalism|suspicious|fire|medical|traffic|normal",
+                "confidence": 0.0-1.0,
+                "safety_concern": "none|low|medium|high",
+                "location_type": "street|building|parking|residential|commercial|unknown"
+            }
+            
+            Focus on safety-relevant details and factual observations."""
+            
+            vision_response = await asyncio.to_thread(
+                self.openai_client.ChatCompletion.create,
+                model=self.openai_config["vision_model"],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Analyze this incident scene image:"},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}",
+                                    "detail": "low"  # Use low detail for faster processing
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=300
+            )
+            
+            # Parse JSON response
+            content = vision_response.choices[0].message.content.strip()
+            if content.startswith('```json'):
+                content = content[7:-3].strip()
+            elif content.startswith('```'):
+                content = content[3:-3].strip()
+            
+            import json
+            vision_analysis = json.loads(content)
+            
+            bt.logging.debug(f"👁️ OpenAI Vision: {vision_analysis.get('incident_type', 'unknown')} (confidence: {vision_analysis.get('confidence', 0.0)})")
+            
+            return {
+                "caption": vision_analysis.get("caption", ""),
+                "objects": vision_analysis.get("objects", []),
+                "confidence": vision_analysis.get("confidence", 0.85),
+                "incident_type": vision_analysis.get("incident_type", "unknown"),
+                "safety_concern": vision_analysis.get("safety_concern", "unknown")
+            }
+            
+        except Exception as e:
+            bt.logging.error(f"OpenAI Vision analysis error: {e}")
+            raise
+    
+    async def _analyze_image_with_blip(self, media: Any) -> Optional[Dict[str, Any]]:
+        """Fallback image analysis using BLIP"""
         if not self.blip_model:
             # Mock analysis for testing
             return {
@@ -652,11 +847,28 @@ class Miner(BaseMinerNeuron):
     
     def _get_model_versions(self) -> Dict[str, str]:
         """Get versions of loaded models"""
-        return {
-            "text_model": "rule_based_v1.0",
-            "visual_model": "blip_base" if getattr(self, 'blip_model', None) else "mock",
+        models = {
             "miner_version": "1.0.0"
         }
+        
+        # Text processing models
+        if self.openai_client:
+            models["text_model"] = f"openai_{self.openai_config['model']}"
+        else:
+            models["text_model"] = "rule_based_v1.0"
+        
+        # Visual processing models
+        if self.openai_client:
+            models["visual_model"] = f"openai_{self.openai_config['vision_model']}"
+        elif getattr(self, 'blip_model', None):
+            models["visual_model"] = "blip_base"
+        else:
+            models["visual_model"] = "mock"
+        
+        # OpenAI status
+        models["openai_available"] = "yes" if self.openai_client else "no"
+        
+        return models
 
     async def blacklist(self, synapse) -> typing.Tuple[bool, str]:
         """
