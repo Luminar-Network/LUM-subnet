@@ -1,4 +1,5 @@
 # Core dependencies
+bittensor>=7.0.0        # Bittensor subnet framework
 starlette>=0.30.0
 pydantic>=2
 rich>=13
