@@ -62,6 +62,8 @@ Luminar creates a **real-time, community-driven crime intelligence network** tha
 
 Luminar operates as a **three-layer decentralized network**:
 
+![Luminar Analytics Dashboard](https://luminar.network/images/analytics.jpg)
+
 ```mermaid
 graph TB
     subgraph "Layer 1: Data Collection"
@@ -465,34 +467,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **API Reference**: [https://api.luminar.network/docs](https://api.luminar.network/docs)
 - **Discord**: [Join our community](https://discord.gg/luminar)
 - **Twitter**: [@LuminarAI](https://twitter.com/LuminarAI)
-
----
-
-## 🎯 Roadmap
-
-### Phase 1: Foundation (Current)
-- ✅ Core subnet infrastructure
-- ✅ Basic AI processing pipeline
-- ✅ Validation and consensus mechanism
-- 🔄 Initial testing and deployment
-
-### Phase 2: Enhancement (Q1 2025)
-- 📱 Mobile application development
-- 🤖 Advanced AI models (CLIP, transformers)
-- 🗄️ Production database deployment
-- 🔐 Enhanced security measures
-
-### Phase 3: Scale (Q2 2025)
-- 🌍 Multi-city deployment
-- 📊 Real-time analytics dashboard
-- 🔌 Third-party API integrations
-- 💼 B2B partnerships
-
-### Phase 4: Intelligence (Q3 2025)
-- 🧠 Predictive crime modeling
-- 🗺️ Dynamic risk heatmaps
-- 📈 Market intelligence platform
-- 🌐 International expansion
 
 ---
 
