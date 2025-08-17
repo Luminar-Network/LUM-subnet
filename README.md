@@ -7,6 +7,8 @@
 
 ## The Decentralized Crime Intelligence Platform <!-- omit in toc -->
 
+![Luminar Network Platform](https://luminar.network/images/platform-overview.jpg)
+
 [Luminar](https://luminar.network/) is a revolutionary Bittensor subnet that transforms how crime data is collected, processed, and utilized. By leveraging decentralized intelligence and community-driven reporting, Luminar creates the world's first incentivized crime intelligence network.
 
 ### **Core Mission**
@@ -60,42 +62,62 @@ Luminar creates a **real-time, community-driven crime intelligence network** tha
 
 ## 🏗️ Architecture Overview
 
-Luminar operates as a **three-layer decentralized network**:
+Luminar operates as a **four-layer decentralized network** with complete user-to-intelligence flow:
 
 ![Luminar Analytics Dashboard](https://luminar.network/images/analytics.jpg)
 
 ```mermaid
 graph TB
-    subgraph "Layer 1: Data Collection"
-        A[Mobile App Users] --> B[Raw Incident Reports]
-        B --> C[Geotag + Timestamp + Media]
+    subgraph "Layer 1: User Submission"
+        A[Mobile App Users] --> B[Media Upload + Metadata]
+        B --> C[Text + Visuals + Geotag + Timestamp]
+        C --> D[User Submission with ID]
     end
     
-    subgraph "Layer 2: Processing (Miners)"
-        D[Semantic Clustering] --> E[AI Models]
-        E --> F[Crime Event Objects]
-        C --> D
+    subgraph "Layer 2: Validator Distribution"
+        D --> E[Luminar Validators]
+        E --> F[Distribute to Miners]
+        F --> G[MediaProcessingRequest]
     end
     
-    subgraph "Layer 3: Validation"
-        G[Data Integrity Checks] --> H[Consensus Scoring]
-        H --> I[Weight Distribution]
-        F --> G
+    subgraph "Layer 3: AI Processing (Miners)"
+        G --> H[Text Analysis + Visual Processing]
+        H --> I[CLIP + BLIP + NLP Models]
+        I --> J[Event Generation + Duplicate Filtering]
+        J --> K[Structured Events]
     end
     
-    subgraph "Layer 4: Intelligence"
-        J[Verified Events Database] --> K[Risk Analysis Engine]
-        K --> L[Predictive Heatmaps]
-        I --> J
+    subgraph "Layer 4: Validation & Consensus"
+        K --> L[Metadata Comparison]
+        L --> M[Timestamp + Geotag + Type Validation]
+        M --> N[Consensus Scoring + Weight Updates]
+    end
+    
+    subgraph "Layer 5: Intelligence Database"
+        N --> O[PostgreSQL + PostGIS]
+        O --> P[Crime Intelligence API]
+        P --> Q[Predictive Analytics + Risk Heatmaps]
     end
 ```
 
 ### Key Components
 
-- **PostgreSQL Database**: Stores verified crime events and metadata
-- **AI Processing Pipeline**: Semantic clustering, multimodal analysis (CLIP)
-- **Consensus Engine**: Bittensor's Yuma Consensus for quality assurance
-- **API Layer**: Real-time access for applications and services
+- **Enhanced Protocol**: Complete user submission flow with media processing
+- **PostgreSQL + PostGIS Database**: Geospatial crime data with advanced querying
+- **AI Processing Pipeline**: CLIP, BLIP, and transformer models for multimodal analysis
+- **Metadata Validation**: Timestamp, geotag, and content consistency checking
+- **Consensus Engine**: Bittensor's Yuma Consensus with custom scoring mechanisms
+- **Real-time API**: Live crime intelligence for applications and services
+
+### Complete Flow Implementation
+
+1. **User Uploads**: Media (images/videos) + text description + metadata with unique ID
+2. **Validator Distribution**: Sends user submissions to miners for processing
+3. **Miner Processing**: AI analysis of text + visuals → structured events like "truck and motorbike accident near balaju at 4pm, June 11"
+4. **Duplicate Detection**: Filters redundant reports using similarity algorithms
+5. **Metadata Validation**: Compares miner events with original user metadata (timestamps, geotags)
+6. **Consensus & Scoring**: Updates miner weights based on validation accuracy
+7. **Intelligence Storage**: Verified events stored in geospatial database for analytics
 
 ---
 
