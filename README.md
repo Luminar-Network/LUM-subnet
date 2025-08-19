@@ -307,12 +307,52 @@ print('✅ OpenAI available:', bool(miner.openai_client))
 
 ## 🚀 Quick Start
 
+### Testnet Registration (Subnet 414)
+
+Before running miners or validators, you need to register on **Luminar Testnet (netuid 414)**:
+
+#### **1. Check Your Wallet Balance**
+```bash
+# Check testnet TAO balance
+btcli wallet balance --subtensor.network test --wallet.name miner
+btcli wallet balance --subtensor.network test --wallet.name validator
+```
+
+#### **2. Get Testnet TAO (if needed)**
+If you need testnet TAO, you can:
+- Get from testnet faucet (if available): `btcli wallet faucet --subtensor.network test --wallet.name your_wallet`
+- Transfer between your wallets: `btcli wallet transfer --subtensor.network test --wallet.name source_wallet --dest destination_address --amount 0.1`
+
+#### **3. Register on Subnet 414**
+```bash
+# Register miner (cost: ~0.0717 τ)
+btcli subnet register \
+    --netuid 414 \
+    --subtensor.network test \
+    --wallet.name miner \
+    --wallet.hotkey default
+
+# Register validator (cost: ~0.0717 τ)
+btcli subnet register \
+    --netuid 414 \
+    --subtensor.network test \
+    --wallet.name validator \
+    --wallet.hotkey default
+```
+
+#### **4. Verify Registration**
+```bash
+# Check subnet status
+btcli subnet metagraph --subtensor.network test --netuid 414
+```
+
 ### Running a Miner
 
 ```bash
-# Basic miner setup
+# Basic miner setup (after registration)
 python neurons/miner.py \
     --netuid 414 \
+    --subtensor.network test \
     --wallet.name miner \
     --wallet.hotkey default \
     --logging.debug
@@ -320,6 +360,7 @@ python neurons/miner.py \
 # With OpenAI integration
 OPENAI_API_KEY=sk-your-key python neurons/miner.py \
     --netuid 414 \
+    --subtensor.network test \
     --wallet.name miner \
     --wallet.hotkey default \
     --blacklist.min_stake_threshold 1000 \
@@ -330,9 +371,10 @@ OPENAI_API_KEY=sk-your-key python neurons/miner.py \
 ### Running a Validator
 
 ```bash
-# Basic validator setup
+# Basic validator setup (after registration)
 python neurons/validator.py \
     --netuid 414 \
+    --subtensor.network test \
     --wallet.name validator \
     --wallet.hotkey default \
     --logging.debug
@@ -340,12 +382,80 @@ python neurons/validator.py \
 # With custom parameters
 python neurons/validator.py \
     --netuid 414 \
+    --subtensor.network test \
     --wallet.name validator \
     --wallet.hotkey default \
     --neuron.sample_size 20 \
     --neuron.timeout 300 \
     --logging.debug
 ```
+
+### Testnet Deployment Guide
+
+#### **Complete Testnet Setup Process**
+
+1. **Install Dependencies**
+   ```bash
+   # Clone and setup
+   git clone https://github.com/Luminar-Network/LUM-subnet.git
+   cd LUM-subnet
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. **Create Wallets**
+   ```bash
+   # Create miner wallet
+   btcli wallet new_coldkey --wallet.name miner
+   btcli wallet new_hotkey --wallet.name miner --wallet.hotkey default
+   
+   # Create validator wallet  
+   btcli wallet new_coldkey --wallet.name validator
+   btcli wallet new_hotkey --wallet.name validator --wallet.hotkey default
+   ```
+
+3. **Get Testnet TAO**
+   ```bash
+   # Try faucet (if available)
+   btcli wallet faucet --subtensor.network test --wallet.name miner
+   btcli wallet faucet --subtensor.network test --wallet.name validator
+   ```
+
+4. **Register on Subnet 414**
+   ```bash
+   # Register both miner and validator
+   btcli subnet register --netuid 414 --subtensor.network test --wallet.name miner --wallet.hotkey default
+   btcli subnet register --netuid 414 --subtensor.network test --wallet.name validator --wallet.hotkey default
+   ```
+
+5. **Start Your Nodes**
+   ```bash
+   # Terminal 1: Start miner
+   source venv/bin/activate
+   python neurons/miner.py --netuid 414 --subtensor.network test --wallet.name miner --wallet.hotkey default --logging.debug
+   
+   # Terminal 2: Start validator
+   source venv/bin/activate  
+   python neurons/validator.py --netuid 414 --subtensor.network test --wallet.name validator --wallet.hotkey default --logging.debug
+   ```
+
+#### **Troubleshooting Testnet Issues**
+
+**Connection Problems:**
+- Ensure you're using `--subtensor.network test`
+- Check network connectivity: `ping test.finney.opentensor.ai`
+- Try explicit endpoint: `--subtensor.chain_endpoint wss://test.finney.opentensor.ai:443`
+
+**Registration Issues:**
+- Verify wallet balance: `btcli wallet balance --subtensor.network test --wallet.name your_wallet`
+- Check current registration cost: `btcli subnet metagraph --subtensor.network test --netuid 414`
+- Transfer TAO between wallets if needed
+
+**Runtime Issues:**
+- Activate virtual environment: `source venv/bin/activate`
+- Install missing dependencies: `pip install -r requirements.txt`
+- Check Python version: `python --version` (needs 3.9+)
 
 ### Development Mode (Local Testing)
 
@@ -457,6 +567,22 @@ luminar-subnet/
 ---
 
 ## 🧪 Testing
+
+### Testnet Testing
+
+```bash
+# Check subnet registration status
+btcli subnet metagraph --subtensor.network test --netuid 414
+
+# Verify wallet registrations
+btcli wallet overview --subtensor.network test
+
+# Test subnet connectivity
+btcli subnet list --subtensor.network test
+
+# Monitor your nodes
+btcli root weights --subtensor.network test --netuid 414
+```
 
 ### Quick Testing
 
