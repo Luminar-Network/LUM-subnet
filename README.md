@@ -312,14 +312,14 @@ print('✅ OpenAI available:', bool(miner.openai_client))
 ```bash
 # Basic miner setup
 python neurons/miner.py \
-    --netuid 1 \
+    --netuid 414 \
     --wallet.name miner \
     --wallet.hotkey default \
     --logging.debug
 
 # With OpenAI integration
 OPENAI_API_KEY=sk-your-key python neurons/miner.py \
-    --netuid 1 \
+    --netuid 414 \
     --wallet.name miner \
     --wallet.hotkey default \
     --blacklist.min_stake_threshold 1000 \
@@ -332,14 +332,14 @@ OPENAI_API_KEY=sk-your-key python neurons/miner.py \
 ```bash
 # Basic validator setup
 python neurons/validator.py \
-    --netuid 1 \
+    --netuid 414 \
     --wallet.name validator \
     --wallet.hotkey default \
     --logging.debug
 
 # With custom parameters
 python neurons/validator.py \
-    --netuid 1 \
+    --netuid 414 \
     --wallet.name validator \
     --wallet.hotkey default \
     --neuron.sample_size 20 \
@@ -394,7 +394,7 @@ OPENAI_MAX_TOKENS=500               # Response length limit
 OPENAI_TEMPERATURE=0.3              # Creativity level
 
 # Network Configuration
-SUBNET_NETUID=1
+SUBNET_NETUID=414
 MIN_STAKE_THRESHOLD=1000
 
 # Logging
@@ -747,7 +747,7 @@ from MySubnet import MySynapse
 class MySynapseAPI(SubnetsAPI):
     def __init__(self, wallet: "bt.wallet"):
         super().__init__(wallet)
-        self.netuid = 99
+        self.netuid = 414
 
     def prepare_synapse(self, prompt: str) -> MySynapse:
         # Do any preparatory work to fill the synapse
