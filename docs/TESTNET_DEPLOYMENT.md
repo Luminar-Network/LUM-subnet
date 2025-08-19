@@ -1,8 +1,8 @@
 # Luminar Subnet Testnet Deployment Guide
 
-## 🚀 Quick Testnet Setup
+## 🚀 Quick Testnet Setup (Subnet 414)
 
-This guide will help you deploy and test the Luminar subnet on Bittensor testnet.
+This guide will help you deploy and test the Luminar subnet on Bittensor testnet using **Luminar Network (netuid 414)**.
 
 ### Prerequisites
 
@@ -31,9 +31,9 @@ btcli --version
 This script will:
 1. ✅ Setup testnet environment
 2. ✅ Check Bittensor installation  
-3. ✅ Create testnet wallet
+3. ✅ Create miner and validator wallets
 4. ✅ Guide you to get testnet TAO
-5. ✅ Register on subnet
+5. ✅ Register on subnet 414 (Luminar Network)
 6. ✅ Start miner and validator
 7. ✅ Show monitoring commands
 
@@ -52,32 +52,37 @@ make db-setup
 
 #### 3.2 Create Wallet
 ```bash
-# Create testnet wallet
-btcli wallet new_coldkey --wallet.name testnet_wallet
-btcli wallet new_hotkey --wallet.name testnet_wallet --wallet.hotkey miner_hotkey
-btcli wallet new_hotkey --wallet.name testnet_wallet --wallet.hotkey validator_hotkey
+# Create miner wallet
+btcli wallet new_coldkey --wallet.name miner
+btcli wallet new_hotkey --wallet.name miner --wallet.hotkey default
+
+# Create validator wallet  
+btcli wallet new_coldkey --wallet.name validator
+btcli wallet new_hotkey --wallet.name validator --wallet.hotkey default
 ```
 
 #### 3.3 Get Testnet TAO
-1. Visit: https://faucet.bittensor.com/
-2. Enter your coldkey address
-3. Request testnet TAO
+Options to get testnet TAO:
+- Get from testnet faucet (if available): `btcli wallet faucet --subtensor.network test --wallet.name miner`
+- Transfer between your wallets: `btcli wallet transfer --subtensor.network test --wallet.name source_wallet --dest destination_address --amount 0.1`
 
-#### 3.4 Register on Subnet
+Registration cost: ~0.0717 τ per registration
+
+#### 3.4 Register on Subnet 414 (Luminar Network)
 ```bash
-# Register miner
+# Register miner (cost: ~0.0717 τ)
 btcli subnet register \
-    --wallet.name testnet_wallet \
-    --wallet.hotkey miner_hotkey \
+    --netuid 414 \
     --subtensor.network test \
-    --netuid 999
+    --wallet.name miner \
+    --wallet.hotkey default
 
-# Register validator  
+# Register validator (cost: ~0.0717 τ)
 btcli subnet register \
-    --wallet.name testnet_wallet \
-    --wallet.hotkey validator_hotkey \
+    --netuid 414 \
     --subtensor.network test \
-    --netuid 999
+    --wallet.name validator \
+    --wallet.hotkey default
 ```
 
 #### 3.5 Start Nodes
@@ -85,20 +90,20 @@ btcli subnet register \
 **Start Miner:**
 ```bash
 python neurons/miner.py \
-    --netuid 999 \
+    --netuid 414 \
     --subtensor.network test \
-    --wallet.name testnet_wallet \
-    --wallet.hotkey miner_hotkey \
+    --wallet.name miner \
+    --wallet.hotkey default \
     --logging.debug
 ```
 
 **Start Validator:**
 ```bash
 python neurons/validator.py \
-    --netuid 999 \
+    --netuid 414 \
     --subtensor.network test \
-    --wallet.name testnet_wallet \
-    --wallet.hotkey validator_hotkey \
+    --wallet.name validator \
+    --wallet.hotkey default \
     --logging.debug
 ```
 
@@ -106,12 +111,17 @@ python neurons/validator.py \
 
 #### Check Subnet Status
 ```bash
-btcli subnet list --subtensor.network test
+# Check subnet 414 (Luminar Network)
+btcli subnet metagraph --subtensor.network test --netuid 414
 ```
 
 #### Check Your Registration
 ```bash
-btcli wallet overview --wallet.name testnet_wallet --subtensor.network test
+# Check miner wallet
+btcli wallet balance --subtensor.network test --wallet.name miner
+
+# Check validator wallet
+btcli wallet balance --subtensor.network test --wallet.name validator
 ```
 
 #### Monitor Logs
@@ -157,9 +167,10 @@ The validator automatically generates synthetic user submissions to test the com
 #### Common Issues
 
 1. **Registration Failed**
-   - Ensure you have enough testnet TAO
-   - Check if netuid 999 is available
+   - Ensure you have enough testnet TAO (minimum ~0.0717 τ per registration)
+   - Check if netuid 414 is available: `btcli subnet metagraph --subtensor.network test --netuid 414`
    - Verify wallet has sufficient balance
+   - Try using faucet: `btcli wallet faucet --subtensor.network test --wallet.name miner`
 
 2. **Connection Issues**
    - Check internet connection
@@ -191,10 +202,14 @@ The validator automatically generates synthetic user submissions to test the com
 ./scripts/deploy_testnet.sh monitor
 
 # Check processes
-ps aux | grep luminar
+ps aux | grep python
 
 # Check open ports
 lsof -i :8091
+
+# Check wallet balances
+btcli wallet balance --subtensor.network test --wallet.name miner
+btcli wallet balance --subtensor.network test --wallet.name validator
 ```
 
 ### Next Steps
@@ -216,4 +231,4 @@ After successful testnet deployment:
 
 ---
 
-🎉 **Your Luminar subnet is now running on testnet!**
+🎉 **Your Luminar subnet is now running on testnet subnet 414 (Luminar Network)!**

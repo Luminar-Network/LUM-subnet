@@ -79,6 +79,27 @@ services:
     profiles:
       - monitoring
 
+  # pgAdmin for Database Management
+  luminar-pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: luminar-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@luminar.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - luminar_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - luminar-network
+    depends_on:
+      - luminar-db
+    profiles:
+      - admin
+
   # Prometheus for Metrics (Optional)
   luminar-prometheus:
     image: prom/prometheus:latest
@@ -108,4 +129,6 @@ volumes:
   luminar_grafana_data:
     driver: local
   luminar_prometheus_data:
+    driver: local
+  luminar_pgadmin_data:
     driver: local

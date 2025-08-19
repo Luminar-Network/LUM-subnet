@@ -138,9 +138,7 @@ class LuminarDatabaseManager:
             'database': config.database,
             'user': config.username,
             'password': config.password,
-            'sslmode': config.ssl_mode,
-            'connect_timeout': config.pool_timeout,
-            'command_timeout': 300,  # 5 minutes for long queries
+            'ssl': 'prefer' if config.ssl_mode == 'require' else 'disable',
         }
 
 # Singleton instance
@@ -154,6 +152,10 @@ def get_db_config() -> DatabaseConfig:
 def get_connection_string(read_only: bool = False) -> str:
     """Get database connection string"""
     return db_manager.get_connection_string(read_only)
+
+def get_connection_params() -> Dict[str, Any]:
+    """Get connection parameters for direct database connections"""
+    return db_manager.get_connection_params()
 
 def get_async_connection_string(read_only: bool = False) -> str:
     """Get async database connection string"""

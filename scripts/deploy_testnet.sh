@@ -1,17 +1,18 @@
 #!/bin/bash
 # Testnet Deployment Script for Luminar Subnet
+# Deploys on Luminar Network (netuid 414) 
 # Copyright © 2025 Luminar Network
 
 set -e
 
-echo "🚀 Luminar Subnet Testnet Deployment"
-echo "======================================"
+echo "🚀 Luminar Subnet Testnet Deployment (netuid 414)"
+echo "=================================================="
 
 # Configuration
-NETUID=999  # Default testnet netuid (adjust as needed)
-WALLET_NAME="testnet_wallet"
-MINER_HOTKEY="miner_hotkey"
-VALIDATOR_HOTKEY="validator_hotkey"
+NETUID=414  # Luminar Network testnet netuid
+WALLET_NAME="miner"  # Default wallet name as per README
+VALIDATOR_WALLET="validator"  # Validator wallet name
+HOTKEY_NAME="default"  # Default hotkey name
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -36,8 +37,12 @@ setup_environment() {
     echo -e "\n${YELLOW}📋 Step 1: Setting up environment${NC}"
     
     # Copy testnet environment
-    cp .env.testnet .env
-    print_status "Testnet environment configured"
+    if [ -f .env.testnet ]; then
+        cp .env.testnet .env
+        print_status "Testnet environment configured (.env.testnet → .env)"
+    else
+        print_warning ".env.testnet not found, using default configuration"
+    fi
     
     # Create logs directory
     mkdir -p logs
@@ -45,8 +50,12 @@ setup_environment() {
     
     # Setup database
     echo "Setting up testnet database..."
-    LUMINAR_ENV=testnet python scripts/setup_database.py setup
-    print_status "Database setup completed"
+    if [ -f scripts/setup_database.py ]; then
+        LUMINAR_ENV=testnet python scripts/setup_database.py setup
+        print_status "Database setup completed"
+    else
+        print_warning "Database setup script not found, skipping database setup"
+    fi
 }
 
 # Step 2: Check Bittensor Installation
@@ -64,53 +73,78 @@ check_bittensor() {
 
 # Step 3: Setup Wallet
 setup_wallet() {
-    echo -e "\n${YELLOW}💳 Step 3: Setting up testnet wallet${NC}"
+    echo -e "\n${YELLOW}💳 Step 3: Setting up testnet wallets${NC}"
     
-    # Check if wallet exists
+    # Setup miner wallet
     if btcli wallet list | grep -q "$WALLET_NAME"; then
-        print_status "Wallet '$WALLET_NAME' already exists"
+        print_status "Miner wallet '$WALLET_NAME' already exists"
     else
-        print_warning "Creating new wallet: $WALLET_NAME"
+        print_warning "Creating new miner wallet: $WALLET_NAME"
         btcli wallet new_coldkey --wallet.name $WALLET_NAME
-        btcli wallet new_hotkey --wallet.name $WALLET_NAME --wallet.hotkey $MINER_HOTKEY
-        btcli wallet new_hotkey --wallet.name $WALLET_NAME --wallet.hotkey $VALIDATOR_HOTKEY
-        print_status "Wallet created successfully"
+        btcli wallet new_hotkey --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME
+        print_status "Miner wallet created successfully"
+    fi
+    
+    # Setup validator wallet  
+    if btcli wallet list | grep -q "$VALIDATOR_WALLET"; then
+        print_status "Validator wallet '$VALIDATOR_WALLET' already exists"
+    else
+        print_warning "Creating new validator wallet: $VALIDATOR_WALLET"
+        btcli wallet new_coldkey --wallet.name $VALIDATOR_WALLET
+        btcli wallet new_hotkey --wallet.name $VALIDATOR_WALLET --wallet.hotkey $HOTKEY_NAME
+        print_status "Validator wallet created successfully"
     fi
     
     # Show wallet info
     echo -e "\n📊 Wallet Information:"
-    btcli wallet overview --wallet.name $WALLET_NAME --subtensor.network test
+    btcli wallet balance --subtensor.network test --wallet.name $WALLET_NAME
+    btcli wallet balance --subtensor.network test --wallet.name $VALIDATOR_WALLET
 }
 
 # Step 4: Get Testnet TAO
 get_testnet_tao() {
     echo -e "\n${YELLOW}🪙 Step 4: Getting testnet TAO${NC}"
     
-    print_warning "You need testnet TAO to register on the subnet"
-    echo "1. Visit the faucet: https://faucet.bittensor.com/"
-    echo "2. Enter your coldkey address"
-    echo "3. Request testnet TAO"
+    print_warning "You need testnet TAO to register on subnet 414 (Luminar Network)"
+    echo "Registration cost: ~0.0717 τ per registration"
+    echo ""
+    echo "Options to get testnet TAO:"
+    echo "1. Faucet (if available): btcli wallet faucet --subtensor.network test --wallet.name $WALLET_NAME"
+    echo "2. Transfer between wallets: btcli wallet transfer --subtensor.network test --wallet.name source --dest destination_address --amount 0.1"
     
-    # Get coldkey address
-    COLDKEY_ADDRESS=$(btcli wallet overview --wallet.name $WALLET_NAME --subtensor.network test | grep "COLDKEY" -A 1 | tail -1 | awk '{print $1}')
-    echo -e "\n🔑 Your coldkey address: ${GREEN}$COLDKEY_ADDRESS${NC}"
+    # Get coldkey addresses
+    echo -e "\n🔑 Your wallet addresses:"
+    btcli wallet overview --wallet.name $WALLET_NAME --subtensor.network test | grep -A 1 "COLDKEY"
+    btcli wallet overview --wallet.name $VALIDATOR_WALLET --subtensor.network test | grep -A 1 "COLDKEY"
     
-    read -p "Press Enter after getting testnet TAO from the faucet..."
+    read -p "Press Enter after getting testnet TAO..."
 }
 
 # Step 5: Register on Subnet
 register_subnet() {
-    echo -e "\n${YELLOW}📝 Step 5: Registering on subnet${NC}"
+    echo -e "\n${YELLOW}📝 Step 5: Registering on Luminar Network (subnet 414)${NC}"
     
     # Register miner
-    echo "Registering miner..."
-    btcli subnet register --wallet.name $WALLET_NAME --wallet.hotkey $MINER_HOTKEY --subtensor.network test --netuid $NETUID
+    echo "Registering miner on subnet 414..."
+    btcli subnet register \
+        --netuid $NETUID \
+        --subtensor.network test \
+        --wallet.name $WALLET_NAME \
+        --wallet.hotkey $HOTKEY_NAME
     
-    # Register validator (if you have enough TAO)
-    echo "Registering validator..."
-    btcli subnet register --wallet.name $WALLET_NAME --wallet.hotkey $VALIDATOR_HOTKEY --subtensor.network test --netuid $NETUID
+    # Register validator
+    echo "Registering validator on subnet 414..."
+    btcli subnet register \
+        --netuid $NETUID \
+        --subtensor.network test \
+        --wallet.name $VALIDATOR_WALLET \
+        --wallet.hotkey $HOTKEY_NAME
     
     print_status "Registration completed"
+    
+    # Verify registration
+    echo -e "\n📊 Verifying registration..."
+    btcli subnet metagraph --subtensor.network test --netuid $NETUID
 }
 
 # Step 6: Start Miner
@@ -122,13 +156,16 @@ start_miner() {
         --netuid $NETUID \
         --subtensor.network test \
         --wallet.name $WALLET_NAME \
-        --wallet.hotkey $MINER_HOTKEY \
+        --wallet.hotkey $HOTKEY_NAME \
         --logging.debug \
         --axon.port 8091 > logs/miner_testnet.log 2>&1 &
     
     MINER_PID=$!
     echo $MINER_PID > logs/miner.pid
     print_status "Miner started (PID: $MINER_PID)"
+    
+    # Show miner startup info
+    echo "Miner log: tail -f logs/miner_testnet.log"
 }
 
 # Step 7: Start Validator
@@ -139,34 +176,39 @@ start_validator() {
     nohup python neurons/validator.py \
         --netuid $NETUID \
         --subtensor.network test \
-        --wallet.name $WALLET_NAME \
-        --wallet.hotkey $VALIDATOR_HOTKEY \
+        --wallet.name $VALIDATOR_WALLET \
+        --wallet.hotkey $HOTKEY_NAME \
         --logging.debug \
         --neuron.sample_size 10 > logs/validator_testnet.log 2>&1 &
     
     VALIDATOR_PID=$!
     echo $VALIDATOR_PID > logs/validator.pid
     print_status "Validator started (PID: $VALIDATOR_PID)"
+    
+    # Show validator startup info
+    echo "Validator log: tail -f logs/validator_testnet.log"
 }
 
 # Step 8: Monitor
 monitor_subnet() {
     echo -e "\n${YELLOW}📊 Step 8: Monitoring${NC}"
     
-    print_status "Luminar subnet is now running on testnet!"
+    print_status "Luminar subnet is now running on testnet (subnet 414)!"
     
     echo -e "\n📋 Quick Commands:"
     echo "• Monitor miner: tail -f logs/miner_testnet.log"
     echo "• Monitor validator: tail -f logs/validator_testnet.log"
-    echo "• Check subnet: btcli subnet list --subtensor.network test"
-    echo "• Check wallet: btcli wallet overview --wallet.name $WALLET_NAME --subtensor.network test"
+    echo "• Check subnet 414: btcli subnet metagraph --subtensor.network test --netuid 414"
+    echo "• Check miner wallet: btcli wallet balance --subtensor.network test --wallet.name $WALLET_NAME"
+    echo "• Check validator wallet: btcli wallet balance --subtensor.network test --wallet.name $VALIDATOR_WALLET"
     
     echo -e "\n🔗 Useful Links:"
     echo "• Testnet Explorer: https://explorer.bittensor.com/"
-    echo "• TAO Faucet: https://faucet.bittensor.com/"
-    echo "• Documentation: https://docs.luminar.network/"
+    echo "• Luminar Network Documentation: https://docs.luminar.network/"
+    echo "• Subnet 414 (Luminar Network) Status: https://taostats.io/subnets/netuid-414/"
     
     echo -e "\n${GREEN}🎉 Testnet deployment completed successfully!${NC}"
+    echo -e "You are now running on ${GREEN}Luminar Network (subnet 414)${NC}"
 }
 
 # Stop function
