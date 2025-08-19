@@ -566,6 +566,97 @@ luminar-subnet/
 
 ---
 
+## 🗄️ Database Migrations
+
+The Luminar subnet includes a comprehensive migration system for managing database schema changes.
+
+### Migration Commands
+
+```bash
+# Run all pending migrations
+python migrations/manager.py migrate
+
+# Run migrations up to a specific version
+python migrations/manager.py migrate 20250817000001
+
+# Create a new migration file
+python migrations/manager.py create add_new_table
+
+# Rollback to a specific version (development only)
+python migrations/manager.py rollback 20250817000001
+```
+
+### Alternative: Using Database Setup Script
+
+```bash
+# Run migrations only
+python scripts/setup_database.py migrate
+
+# Full database setup (includes migrations)
+python scripts/setup_database.py setup
+
+# Specify environment
+python scripts/setup_database.py migrate --env staging
+python scripts/setup_database.py migrate --env production
+```
+
+### Complete Database Setup Workflow
+
+```bash
+# 1. Run migrations to create schema
+python migrations/manager.py migrate
+
+# 2. Populate with sample data
+python scripts/setup_database.py sample-data
+
+# 3. Verify setup
+python scripts/test_database.py
+
+# Alternative: One-command setup (includes migrations + sample data)
+python scripts/setup_database.py setup
+```
+
+### Seed Data Commands
+
+After running migrations, populate your database with sample data:
+
+```bash
+# Populate with sample crime intelligence data
+python scripts/setup_database.py sample-data
+
+# Create comprehensive test database with fixtures
+python scripts/setup_test_database.py
+
+# Test database connectivity
+python scripts/test_database.py
+
+# Environment-specific seed data
+python scripts/setup_database.py sample-data --env local
+python scripts/setup_database.py sample-data --env staging
+```
+
+### Sample Data Includes
+
+- 🚨 **Crime Reports**: Geographic incident reports with NYC coordinates
+- 📱 **Media Submissions**: Test media files with processing workflows
+- 👥 **User Data**: Sample accounts with wallet addresses
+- ⚖️ **Validator Metrics**: Performance data and consensus statistics
+- 📊 **Processing Events**: Media validation and scoring workflows
+
+### Migration Features
+
+- ✅ **Version Tracking**: Tracks applied migrations in `schema_migrations` table
+- ✅ **Checksum Validation**: Ensures migration file integrity
+- ✅ **Execution Timing**: Records migration performance
+- ✅ **Transaction Safety**: Migrations run within database transactions
+- ✅ **Template Generation**: Auto-creates properly formatted migration files
+- ✅ **Rollback Support**: Available for non-production environments
+- ✅ **Multi-Environment**: Works with local, staging, and production databases
+
+### Current Migrations
+
+- `20250817000001_initial_schema.sql` - Core crime intelligence database schema with PostGIS support
+
 ## 🧪 Testing
 
 ### Testnet Testing
