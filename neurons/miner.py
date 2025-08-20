@@ -79,7 +79,7 @@ from template.base.miner import BaseMinerNeuron
 try:
     from template.protocol import (
         MediaProcessingRequest, UserSubmission, ProcessedEvent, 
-        MediaUpload, ValidationResult
+        MediaUpload, ValidationResult, Dummy
     )
     LUMINAR_PROTOCOL_AVAILABLE = True
 except ImportError:
@@ -207,7 +207,7 @@ class Miner(BaseMinerNeuron):
             self.blip_processor = None
             bt.logging.info("👁️ Visual processing: Mock mode (BLIP not available)")
 
-    async def forward(self, synapse) -> Any:
+    async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
         """
         Main processing function for media submissions or dummy requests
         
@@ -870,7 +870,7 @@ class Miner(BaseMinerNeuron):
         
         return models
 
-    async def blacklist(self, synapse) -> typing.Tuple[bool, str]:
+    async def blacklist(self, synapse: bt.Synapse) -> typing.Tuple[bool, str]:
         """
         Determines whether an incoming request should be blacklisted and thus ignored.
         
@@ -904,7 +904,7 @@ class Miner(BaseMinerNeuron):
         bt.logging.trace(f"Not blacklisting recognized hotkey {synapse.dendrite.hotkey}")
         return False, "Hotkey recognized!"
 
-    async def priority(self, synapse) -> float:
+    async def priority(self, synapse: bt.Synapse) -> float:
         """
         The priority function determines the order in which requests are handled.
         
