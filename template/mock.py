@@ -11,28 +11,38 @@ class MockSubtensor(bt.MockSubtensor):
     def __init__(self, netuid, n=16, wallet=None, network="mock"):
         super().__init__(network=network)
 
-        if not self.subnet_exists(netuid):
-            self.create_subnet(netuid)
+        # Create subnet if it doesn't exist
+        try:
+            if not self.subnet_exists(netuid):
+                self.create_subnet(netuid)
+        except Exception as e:
+            bt.logging.warning(f"Could not create subnet {netuid}: {e}")
 
         # Register ourself (the validator) as a neuron at uid=0
         if wallet is not None:
-            self.force_register_neuron(
-                netuid=netuid,
-                hotkey=wallet.hotkey.ss58_address,
-                coldkey=wallet.coldkey.ss58_address,
-                balance=100000,
-                stake=100000,
-            )
+            try:
+                self.force_register_neuron(
+                    netuid=netuid,
+                    hotkey=wallet.hotkey.ss58_address,
+                    coldkey=wallet.coldkey.ss58_address,
+                    balance=100000,
+                    stake=100000,
+                )
+            except Exception as e:
+                bt.logging.warning(f"Could not register wallet neuron: {e}")
 
         # Register n mock neurons who will be miners
         for i in range(1, n + 1):
-            self.force_register_neuron(
-                netuid=netuid,
-                hotkey=f"miner-hotkey-{i}",
-                coldkey="mock-coldkey",
-                balance=100000,
-                stake=100000,
-            )
+            try:
+                self.force_register_neuron(
+                    netuid=netuid,
+                    hotkey=f"miner-hotkey-{i}",
+                    coldkey="mock-coldkey",
+                    balance=100000,
+                    stake=100000,
+                )
+            except Exception as e:
+                bt.logging.warning(f"Could not register mock neuron {i}: {e}")
 
 
 class MockMetagraph(bt.metagraph):

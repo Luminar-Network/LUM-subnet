@@ -394,12 +394,14 @@ class Miner(BaseMinerNeuron):
         """Fallback rule-based text analysis using regex patterns"""
         # Basic entity extraction using patterns
         entities = {}
+        confidence_factors = []
         
         # Vehicle detection
         vehicles = re.findall(r'\b(car|truck|bike|motorcycle|motorbike|bus|van|auto|taxi)\b', 
                              text_description.lower())
         if vehicles:
             entities["vehicles"] = list(set(vehicles))
+            confidence_factors.append(0.2)  # Vehicles increase confidence
         
         # Location detection (simple pattern)
         location_patterns = [
@@ -413,6 +415,7 @@ class Miner(BaseMinerNeuron):
         
         if locations:
             entities["locations"] = list(set(locations))
+            confidence_factors.append(0.15)  # Locations increase confidence
         
         # Time extraction
         time_patterns = [
@@ -427,9 +430,22 @@ class Miner(BaseMinerNeuron):
         
         if times:
             entities["times"] = list(set(times))
+            confidence_factors.append(0.1)  # Time references increase confidence
         
         # Event type classification
-        event_type = self._classify_event_type(text_description)
+        event_type, type_confidence = self._classify_event_type_with_confidence(text_description)
+        confidence_factors.append(type_confidence)
+        
+        # Text quality factors
+        text_length = len(text_description.split())
+        if text_length > 10:
+            confidence_factors.append(0.1)  # Longer descriptions are more detailed
+        elif text_length < 3:
+            confidence_factors.append(-0.2)  # Very short descriptions are less reliable
+        
+        # Calculate final confidence
+        base_confidence = 0.4  # Base confidence for rule-based analysis
+        final_confidence = min(0.95, base_confidence + sum(confidence_factors))
         
         # Generate text embedding for similarity comparison
         try:
@@ -441,39 +457,77 @@ class Miner(BaseMinerNeuron):
         return {
             "event_type": event_type,
             "entities": entities,
-            "confidence": 0.8,
+            "confidence": final_confidence,
             "text_embedding": text_embedding,
             "original_text": text_description
         }
     
     def _classify_event_type(self, text: str) -> str:
         """Classify event type from text description"""
+        event_type, _ = self._classify_event_type_with_confidence(text)
+        return event_type
+    
+    def _classify_event_type_with_confidence(self, text: str) -> tuple[str, float]:
+        """Classify event type from text description with confidence score"""
         text_lower = text.lower()
         
-        # Define keywords for different event types
+        # Define keywords for different event types with weights
         keywords = {
-            "accident": ["accident", "collision", "crash", "hit", "injured", "ambulance"],
-            "theft": ["stolen", "theft", "robbed", "missing", "pickpocket", "burglary"],
-            "assault": ["fight", "attacked", "assault", "beaten", "violence", "aggression"],
-            "vandalism": ["damaged", "broken", "vandalism", "graffiti", "destroyed"],
-            "suspicious": ["suspicious", "strange", "unusual", "concerning", "weird"],
-            "fire": ["fire", "smoke", "burning", "flames", "firefighters"],
-            "medical": ["medical", "emergency", "ambulance", "injured", "hurt", "pain"],
-            "traffic": ["traffic", "jam", "blocked", "congestion", "stuck"]
+            "accident": {
+                "strong": ["accident", "collision", "crash", "hit", "injured", "ambulance"],
+                "weak": ["bump", "scrape", "damage"]
+            },
+            "theft": {
+                "strong": ["stolen", "theft", "robbed", "burglary"],
+                "weak": ["missing", "pickpocket", "lost"]
+            },
+            "assault": {
+                "strong": ["fight", "attacked", "assault", "beaten", "violence"],
+                "weak": ["aggression", "confrontation", "argument"]
+            },
+            "vandalism": {
+                "strong": ["vandalism", "graffiti", "destroyed"],
+                "weak": ["damaged", "broken", "defaced"]
+            },
+            "suspicious": {
+                "strong": ["suspicious", "concerning"],
+                "weak": ["strange", "unusual", "weird"]
+            },
+            "fire": {
+                "strong": ["fire", "burning", "flames", "firefighters"],
+                "weak": ["smoke", "smoldering"]
+            },
+            "medical": {
+                "strong": ["medical emergency", "ambulance", "injured", "hurt"],
+                "weak": ["pain", "unwell", "sick"]
+            },
+            "traffic": {
+                "strong": ["traffic jam", "blocked", "congestion"],
+                "weak": ["stuck", "slow", "heavy traffic"]
+            }
         }
         
-        # Score each event type
+        # Score each event type with weighted confidence
         scores = {}
-        for event_type, keyword_list in keywords.items():
-            score = sum(1 for keyword in keyword_list if keyword in text_lower)
-            if score > 0:
-                scores[event_type] = score
+        confidences = {}
         
-        # Return highest scoring event type
+        for event_type, keyword_categories in keywords.items():
+            strong_matches = sum(1 for keyword in keyword_categories["strong"] if keyword in text_lower)
+            weak_matches = sum(1 for keyword in keyword_categories["weak"] if keyword in text_lower)
+            
+            total_score = strong_matches * 2 + weak_matches  # Strong keywords worth more
+            if total_score > 0:
+                scores[event_type] = total_score
+                # Confidence based on match strength and quantity
+                confidence = min(0.9, 0.3 + (strong_matches * 0.2) + (weak_matches * 0.1))
+                confidences[event_type] = confidence
+        
+        # Return highest scoring event type with its confidence
         if scores:
-            return max(scores, key=scores.get)
+            best_event = max(scores, key=scores.get)
+            return best_event, confidences[best_event]
         else:
-            return "incident"
+            return "incident", 0.2  # Low confidence for generic classification
     
     async def _analyze_media(self, media_files: List[Any]) -> Dict[str, Any]:
         """
@@ -486,14 +540,16 @@ class Miner(BaseMinerNeuron):
                 "image_captions": [],
                 "detected_objects": [],
                 "scene_description": "",
-                "confidence": 0.0
+                "confidence": 0.0,
+                "analysis_quality": "no_media"
             }
         
         visual_analysis = {
             "image_captions": [],
             "detected_objects": [],
             "scene_description": "",
-            "confidence": 0.0
+            "confidence": 0.0,
+            "analysis_quality": "processing"
         }
         
         for media in media_files:
@@ -583,12 +639,23 @@ class Miner(BaseMinerNeuron):
             
             bt.logging.debug(f"👁️ OpenAI Vision: {vision_analysis.get('incident_type', 'unknown')} (confidence: {vision_analysis.get('confidence', 0.0)})")
             
+            # Use OpenAI's confidence if available, otherwise calculate based on response quality
+            openai_confidence = vision_analysis.get("confidence", 0.0)
+            if openai_confidence > 0:
+                final_confidence = openai_confidence
+            else:
+                # Calculate confidence based on response completeness
+                caption_length = len(vision_analysis.get("caption", "").split())
+                objects_count = len(vision_analysis.get("objects", []))
+                final_confidence = min(0.95, 0.7 + (caption_length * 0.01) + (objects_count * 0.05))
+            
             return {
                 "caption": vision_analysis.get("caption", ""),
                 "objects": vision_analysis.get("objects", []),
-                "confidence": vision_analysis.get("confidence", 0.85),
+                "confidence": final_confidence,
                 "incident_type": vision_analysis.get("incident_type", "unknown"),
-                "safety_concern": vision_analysis.get("safety_concern", "unknown")
+                "safety_concern": vision_analysis.get("safety_concern", "unknown"),
+                "analysis_quality": "openai_vision"
             }
             
         except Exception as e:
@@ -598,11 +665,12 @@ class Miner(BaseMinerNeuron):
     async def _analyze_image_with_blip(self, media: Any) -> Optional[Dict[str, Any]]:
         """Fallback image analysis using BLIP"""
         if not self.blip_model:
-            # Mock analysis for testing
+            # Mock analysis for testing - lower confidence for mock
             return {
                 "caption": f"Image content from {getattr(media, 'filename', 'unknown')}",
                 "objects": ["vehicle", "road"],
-                "confidence": 0.75
+                "confidence": 0.3,  # Lower confidence for mock analysis
+                "analysis_quality": "mock"
             }
         
         try:
@@ -618,10 +686,14 @@ class Miner(BaseMinerNeuron):
             # Extract objects from caption
             objects = self._extract_objects_from_caption(caption)
             
+            # Calculate confidence based on caption quality and object detection
+            caption_confidence = min(0.9, 0.6 + (len(objects) * 0.05) + (len(caption.split()) * 0.01))
+            
             return {
                 "caption": caption,
                 "objects": objects,
-                "confidence": 0.85
+                "confidence": caption_confidence,
+                "analysis_quality": "blip_model"
             }
             
         except Exception as e:
@@ -649,19 +721,38 @@ class Miner(BaseMinerNeuron):
         """
         Combine text and visual analysis to create comprehensive understanding
         """
+        text_confidence = text_analysis.get("confidence", 0.5)
+        visual_confidence = visual_analysis.get("confidence", 0.0)
+        
+        # Weighted combination - text analysis is primary, visual is supporting
+        if visual_confidence > 0:
+            # Both analyses available - weighted average with text being more important
+            combined_confidence = (text_confidence * 0.7) + (visual_confidence * 0.3)
+        else:
+            # Only text analysis available
+            combined_confidence = text_confidence
+        
         combined = {
             "event_type": text_analysis.get("event_type", "incident"),
-            "confidence": (text_analysis.get("confidence", 0.5) + visual_analysis.get("confidence", 0.0)) / 2,
+            "confidence": combined_confidence,
             "entities": text_analysis.get("entities", {}),
             "visual_content": visual_analysis.get("scene_description", ""),
-            "all_objects": text_analysis.get("entities", {}).get("vehicles", []) + visual_analysis.get("detected_objects", [])
+            "all_objects": text_analysis.get("entities", {}).get("vehicles", []) + visual_analysis.get("detected_objects", []),
+            "analysis_sources": {
+                "text_confidence": text_confidence,
+                "visual_confidence": visual_confidence,
+                "text_quality": "openai" if self.openai_client else "rule_based",
+                "visual_quality": visual_analysis.get("analysis_quality", "none")
+            }
         }
         
         # Enhance event type if visual evidence supports it
         visual_desc = visual_analysis.get("scene_description", "").lower()
         if "accident" in visual_desc or "crash" in visual_desc:
             combined["event_type"] = "accident"
+            # Boost confidence when visual evidence supports text analysis
             combined["confidence"] = min(combined["confidence"] + 0.1, 1.0)
+            combined["analysis_sources"]["visual_support"] = True
         
         return combined
     
