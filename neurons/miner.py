@@ -33,6 +33,10 @@ import os
 import json
 import uuid
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add template path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
