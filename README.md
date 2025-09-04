@@ -16,9 +16,6 @@
 - **AI-Powered Analysis**: Uses OpenAI GPT models for text processing with rule-based fallbacks
 - **Structured Output**: Extracts crime type, location, entities, and confidence scores
 - **Flexible Processing**: Supports both OpenAI integration and CPU-only operation
-- **Database Infrastructure**: PostgreSQL + PostGIS with automated migrations
-- **Development Tools**: Docker setup, monitoring stack, and comprehensive testing
-- **Easy Deployment**: One-command setup with Makefile automation
 
 ## Quick Start
 
@@ -45,10 +42,10 @@ uv sync && source .venv/bin/activate
 btcli subnet register --netuid 414 --subtensor.network test --wallet.name miner
 
 # Start miner
-python neurons/miner.py --netuid 414 --subtensor.network test --wallet.name miner
+python neurons/miner.py --netuid 414 --subtensor.network test --wallet.name miner --wallet.hotkey hotkey --axon.port port --axon.host host_ip --logging.debug
 
 # Start validator (separate terminal)
-python neurons/validator.py --netuid 414 --subtensor.network test --wallet.name validator
+python neurons/validator.py --netuid 414 --subtensor.network test --wallet.name validator --wallet.hotkey hotkey --axon.port port --axon.host host_ip --logging.debug
 ```
 
 ## Architecture
@@ -126,7 +123,6 @@ Create `.env` file:
 ```env
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-4o-mini
-# DATABASE_URL=postgresql://luminar_dev:dev_password@localhost/luminar_local
 ```
 
 ## Deployment
@@ -152,10 +148,10 @@ OPENAI_MODEL=gpt-4o-mini
 4. **Start Nodes**
    ```bash
    # Terminal 1: Miner
-   python neurons/miner.py --netuid 414 --subtensor.network test --wallet.name miner
+   python neurons/miner.py --netuid 414 --subtensor.network test --wallet.name miner --wallet.hotkey hotkey --axon.port port --axon.host host_ip --logging.debug
 
    # Terminal 2: Validator
-   python neurons/validator.py --netuid 414 --subtensor.network test --wallet.name validator
+   python neurons/validator.py --netuid 414 --subtensor.network test --wallet.name validator --wallet.hotkey hotkey --axon.port port --axon.host host_ip --logging.debug
    ```
 
 ## File Structure
@@ -184,7 +180,6 @@ luminar-subnet/
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | OpenAI API key for enhanced processing | None |
 | `OPENAI_MODEL` | GPT model to use | gpt-4o-mini |
-| `DATABASE_URL` | PostgreSQL connection string | Local dev DB |
 | `LOG_LEVEL` | Logging verbosity | INFO |
 
 ### Validator Settings
