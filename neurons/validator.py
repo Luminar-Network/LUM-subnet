@@ -2,6 +2,7 @@
 # Copyright © 2023 Yuma Rao
 # Copyright © 2025 Luminar Network
 # Copyright © 2025 Khem Raj Regmi
+# Copyright © 2025 diwas7777
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 # documentation files (the "Software"), to deal in the Software without restriction, including without limitation
@@ -23,11 +24,13 @@ import sys
 import os
 import random
 import numpy as np
+import torch
 import bittensor as bt
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 import uuid
 import hashlib
+import json
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -37,504 +40,472 @@ import bittensor as bt
 # import base validator class which takes care of most of the boilerplate
 from template.base.validator import BaseValidatorNeuron
 
-# Bittensor Validator Template:
+# OpenAI integration for Version 1 crime report generation
 try:
-    from template.validator import forward
-    TEMPLATE_FORWARD_AVAILABLE = True
+    import openai
+    OPENAI_AVAILABLE = True
 except ImportError:
-    TEMPLATE_FORWARD_AVAILABLE = False
-    bt.logging.warning("Template forward not available - using Luminar implementation")
+    OPENAI_AVAILABLE = False
+    bt.logging.warning("OpenAI not available - using rule-based crime report generation")
 
 # Import Luminar protocol
-try:
-    from template.protocol import (
-        MediaProcessingRequest, UserSubmission, ProcessedEvent, 
-        MediaUpload, ValidationResult
-    )
-    LUMINAR_PROTOCOL_AVAILABLE = True
-except ImportError:
-    # Fallback for dummy protocol if MediaProcessingRequest not available
-    from template.protocol import Dummy as MediaProcessingRequest
-    
-    # Mock classes for testing
-    class UserSubmission:
-        def __init__(self, submission_id, user_id, text_description, media_files, geotag, timestamp, incident_type, metadata):
-            self.submission_id = submission_id
-            self.user_id = user_id
-            self.text_description = text_description
-            self.media_files = media_files
-            self.geotag = geotag
-            self.timestamp = timestamp
-            self.incident_type = incident_type
-            self.metadata = metadata
-    
-    class MediaUpload:
-        def __init__(self, filename, media_type, url, file_size):
-            self.filename = filename
-            self.media_type = media_type
-            self.url = url
-            self.file_size = file_size
-    
-    class ProcessedEvent:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-    
-    LUMINAR_PROTOCOL_AVAILABLE = False
-    bt.logging.warning("Using dummy protocol - Luminar protocol not available")
-
-# Import utilities
-try:
-    from template.utils.uids import get_random_uids
-except ImportError:
-    def get_random_uids(validator, k=None):
-        """Fallback function for getting random UIDs"""
-        if k is None:
-            k = min(10, len(validator.metagraph.hotkeys))
-        return np.random.choice(len(validator.metagraph.hotkeys), size=k, replace=False)
-
+from template.protocol import CrimeReportAnalysisRequest, CrimeEvent
+from template.utils.uids import get_random_uids
 
 class Validator(BaseValidatorNeuron):
     """
-    Luminar Media Processing Validator
+    Luminar Subnet Validator
     
-    Implements complete user media processing flow:
-    1. User uploads media (text + visuals) + metadata with ID
-    2. Validator receives user submissions
-    3. Validator sends submissions to miners for processing  
-    4. Miner creates events from text/visual analysis, filters duplicates
-    5. Validator compares miner events with original user metadata
-    6. Validator scores miners based on metadata consistency
+    Simple crime report analysis system:
+    - Generates realistic crime reports using OpenAI
+    - Sends reports to miners for analysis
+    - Scores miners based on analysis quality
     """
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-
-        bt.logging.info("🚀 Initializing Luminar Media Processing Validator")
-        bt.logging.info("load_state()")
-        self.load_state()
-
-        # User submission queue (simulates receiving from app)
-        self.pending_submissions = []
-        self.processed_submissions = {}
         
-        # Validation statistics
-        self.validation_stats = {
-            "total_submissions": 0,
-            "successful_validations": 0,
-            "metadata_mismatches": 0,
-            "duplicate_flags": 0
-        }
+        # Version 1 configuration
+        self.version = "1.0.0"
         
-        # Metadata comparison thresholds
-        self.validation_thresholds = {
-            "timestamp_tolerance_minutes": 60,
-            "geotag_tolerance_meters": 500,
-            "visual_authenticity_min": 0.7,
-            "text_consistency_min": 0.6
-        }
+        # Initialize OpenAI client for crime report generation
+        self._initialize_openai()
         
-        bt.logging.info("✅ Luminar Validator initialized successfully")
+        # Crime scenarios
+        self.crime_scenarios = [
+            "theft", "burglary", "robbery", "assault", "vandalism", 
+            "fraud", "drug_offense", "traffic_violation", "domestic_violence",
+            "cybercrime", "harassment", "trespassing", "arson"
+        ]
+        
+        # Common locations for scenarios
+        self.locations = [
+            "downtown area", "residential neighborhood", "shopping mall", 
+            "parking lot", "school campus", "public park", "subway station",
+            "office building", "grocery store", "gas station"
+        ]
+        
+        # Time references
+        self.time_references = [
+            "yesterday evening", "this morning", "last night", "earlier today",
+            "around 3pm", "late at night", "during rush hour", "weekend afternoon"
+        ]
+        
+        bt.logging.info(f"🚀 Luminar Validator Version {self.version} initialized")
+        
+    def _initialize_openai(self):
+        """Initialize OpenAI client for crime report generation"""
+        if not OPENAI_AVAILABLE:
+            bt.logging.info("🤖 OpenAI: Not available - using template-based reports")
+            self.openai_client = None
+            return
+            
+        # Get OpenAI API key from environment
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            bt.logging.warning("🔑 OPENAI_API_KEY not found in environment")
+            self.openai_client = None
+            return
+            
+        # Initialize OpenAI client for Version 1
+        try:
+            self.openai_client = openai.OpenAI(api_key=api_key)
+            
+            # Version 1 OpenAI configuration
+            self.openai_config = {
+                "model": os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
+                "max_tokens": int(os.getenv("OPENAI_MAX_TOKENS", "300")),
+                "temperature": float(os.getenv("OPENAI_TEMPERATURE", "0.7"))  # Higher temperature for creative reports
+            }
+            
+            bt.logging.info(f"✅ OpenAI initialized with model: {self.openai_config['model']}")
+            
+        except Exception as e:
+            bt.logging.error(f"❌ Failed to initialize OpenAI: {e}")
+            self.openai_client = None
 
     async def forward(self):
         """
-        Main validation loop implementing your flow:
-        
-        1. Get user submissions (simulated)
-        2. Send to miners for processing
-        3. Compare results with metadata
-        4. Score miners and update weights
+        Forward function - generate crime reports and test miners
         """
-        # Check if we have Luminar protocol available
-        if LUMINAR_PROTOCOL_AVAILABLE:
-            return await self._luminar_forward()
-        else:
-            # Fallback to template forward if available
-            if TEMPLATE_FORWARD_AVAILABLE:
-                bt.logging.info("Using template forward (Luminar protocol not available)")
-                return await forward(self)
-            else:
-                # Basic validation loop
-                bt.logging.info("Running basic validation loop")
-                await asyncio.sleep(30)
+        bt.logging.info(f"🔄 Starting Version {self.version} validation round")
+        
+        try:
+            # Get a sample of miners to test
+            miner_uids = get_random_uids(self, k=min(10, len(self.metagraph.hotkeys)))
+            
+            if len(miner_uids) == 0:
+                bt.logging.warning("⚠️ No miners available for testing")
                 return
-    
-    async def _luminar_forward(self):
-        """
-        Luminar-specific validation forward pass
-        """
-        bt.logging.info("🔄 Starting Luminar validation round...")
-        
-        # Step 1: Get user submissions (simulate app uploads)
-        user_submissions = await self._get_user_submissions()
-        
-        if not user_submissions:
-            bt.logging.info("⏳ No user submissions available, waiting...")
-            await asyncio.sleep(30)
-            return
-        
-        bt.logging.info(f"📥 Processing {len(user_submissions)} user submissions")
-        
-        # Step 2: Send submissions to miners
-        try:
-            miner_uids = get_random_uids(self, k=min(getattr(self.config.neuron, 'sample_size', 10), self.subtensor.n.item()))
-        except:
-            # Fallback if get_random_uids fails
-            available_uids = list(range(len(self.metagraph.hotkeys)))
-            sample_size = min(10, len(available_uids))
-            miner_uids = np.random.choice(available_uids, size=sample_size, replace=False)
-        
-        if len(miner_uids) == 0:
-            bt.logging.warning("❌ No miners available for processing")
-            await asyncio.sleep(30)
-            return
-        
-        # Create processing request
-        request = MediaProcessingRequest()
-        if hasattr(request, 'user_submissions'):
-            request.user_submissions = user_submissions
-            request.task_id = f"VAL_{int(time.time())}"
-            request.processing_deadline = datetime.now() + timedelta(minutes=5)
-            request.requirements = {"duplicate_detection": True, "visual_analysis": True}
-        
-        # Step 3: Query miners
-        bt.logging.info(f"🔗 Querying {len(miner_uids)} miners...")
-        try:
-            responses = await self.dendrite(
-                axons=[self.metagraph.axons[uid] for uid in miner_uids],
-                synapse=request,
-                deserialize=False,
-                timeout=getattr(self.config.neuron, 'timeout', 30)
-            )
+                
+            bt.logging.info(f"🎯 Testing {len(miner_uids)} miners")
+            
+            # Generate crime report for testing
+            crime_report = await self._generate_crime_report()
+            
+            # Send report to miners and collect responses
+            responses = await self._query_miners(miner_uids, crime_report)
+            
+            # Score the responses
+            scores = self._score_responses(responses, crime_report)
+            
+            # Set weights based on scores
+            self._set_weights(scores)
+            
+            bt.logging.info(f"✅ Validation round completed for {len(miner_uids)} miners")
+            
         except Exception as e:
-            bt.logging.error(f"❌ Error querying miners: {e}")
-            responses = []
-        
-        # Step 4: Validate miner responses against user metadata
-        scores = await self._validate_miner_responses(responses, user_submissions, miner_uids)
-        
-        # Step 5: Update miner weights based on validation scores
-        await self._update_weights(scores, miner_uids)
-        
-        # Step 6: Store results and update statistics
-        await self._store_validation_results(user_submissions, responses, scores)
-        
-        bt.logging.info(f"✅ Validation round completed. Processed {len(user_submissions)} submissions")
-    
-    async def _get_user_submissions(self) -> List[UserSubmission]:
+            bt.logging.error(f"❌ Error in validation round: {e}")
+
+    async def _generate_crime_report(self) -> Dict[str, Any]:
         """
-        Get user submissions from mobile app/web interface
-        
-        In production: This would connect to your app's API
-        For testing: Generates realistic synthetic submissions
+        Generate a realistic crime report for testing miners
         """
-        # TODO: In production, replace with actual API calls
-        # return await self._fetch_from_app_api()
+        # Select random scenario components
+        crime_type = random.choice(self.crime_scenarios)
+        location = random.choice(self.locations)
+        time_ref = random.choice(self.time_references)
         
-        # For now, generate synthetic user submissions
-        return await self._generate_synthetic_submissions()
-    
-    async def _generate_synthetic_submissions(self) -> List[UserSubmission]:
-        """Generate realistic user submissions for testing"""
-        
-        # Sample incidents with media
-        incidents = [
-            {
-                "text": "Car accident on main street, two vehicles involved, no injuries reported",
-                "location": {"lat": 27.7172, "lng": 85.3240},
-                "incident_type": "accident",
-                "has_media": True
-            },
-            {
-                "text": "Motorcycle theft reported near college gate, red Honda missing",
-                "location": {"lat": 27.7000, "lng": 85.3333},
-                "incident_type": "theft", 
-                "has_media": False
-            },
-            {
-                "text": "Fight between two groups near market area, police called",
-                "location": {"lat": 27.7068, "lng": 85.3181},
-                "incident_type": "assault",
-                "has_media": True
-            },
-            {
-                "text": "Suspicious person taking photos of houses in residential area",
-                "location": {"lat": 27.7256, "lng": 85.3370},
-                "incident_type": "suspicious",
-                "has_media": False
-            }
-        ]
-        
-        submissions = []
-        
-        for i, incident in enumerate(incidents):
-            submission_id = f"sub_{uuid.uuid4().hex[:8]}"
-            
-            # Create media files if incident has media
-            media_files = []
-            if incident["has_media"]:
-                media_files.append(MediaUpload(
-                    filename=f"incident_{i}.jpg",
-                    media_type="image/jpeg",
-                    url=f"https://example.com/media/{submission_id}.jpg",
-                    file_size=1024 * 1024 * 2  # 2MB
-                ))
-            
-            submission = UserSubmission(
-                submission_id=submission_id,
-                user_id=f"user_{random.randint(1, 100)}",
-                text_description=incident["text"],
-                media_files=media_files,
-                geotag=incident["location"],
-                timestamp=datetime.now() - timedelta(minutes=random.randint(5, 60)),
-                incident_type=incident["incident_type"],
-                metadata={
-                    "source": "mobile_app",
-                    "app_version": "1.2.3",
-                    "device_type": "iPhone"
-                }
-            )
-            
-            submissions.append(submission)
-        
-        return submissions
-    
-    async def _validate_miner_responses(self, responses: List[Any], 
-                                      user_submissions: List[UserSubmission],
-                                      miner_uids: List[int]) -> List[float]:
-        """
-        Core validation: Compare miner events with user metadata
-        
-        Your requirement: "validator compares miner generated event with metadata upload by user (timestamp, geotags)"
-        """
-        bt.logging.info("🔍 Validating miner responses against user metadata...")
-        
-        scores = []
-        
-        for i, (response, miner_uid) in enumerate(zip(responses, miner_uids)):
+        # Generate report using OpenAI if available
+        if self.openai_client:
             try:
-                score = await self._score_miner_response(response, user_submissions, miner_uid)
-                scores.append(score)
-                bt.logging.debug(f"Miner {miner_uid} scored: {score:.3f}")
+                report_text = await self._openai_generate_crime_report(crime_type, location, time_ref)
             except Exception as e:
-                bt.logging.error(f"Error scoring miner {miner_uid}: {e}")
-                scores.append(0.0)
-        
-        return scores
-    
-    async def _score_miner_response(self, response: Any,
-                                  user_submissions: List[UserSubmission],
-                                  miner_uid: int) -> float:
-        """
-        Score a single miner's response by comparing with user metadata
-        
-        Checks:
-        1. Timestamp consistency
-        2. Geotag accuracy
-        3. Event type accuracy
-        4. Text consistency
-        5. Duplicate detection accuracy
-        """
-        
-        if not hasattr(response, 'processed_events') or not response.processed_events:
-            bt.logging.warning(f"Miner {miner_uid} returned no processed events")
-            return 0.0
-        
-        total_score = 0.0
-        event_count = len(response.processed_events)
-        
-        # Create mapping of submission IDs to submissions
-        submission_map = {sub.submission_id: sub for sub in user_submissions}
-        
-        for event in response.processed_events:
-            event_score = 0.0
-            
-            # Find corresponding submission
-            submission = submission_map.get(getattr(event, 'submission_id', None))
-            if not submission:
-                bt.logging.warning(f"No submission found for event {getattr(event, 'event_id', 'unknown')}")
-                continue
-            
-            # 1. Timestamp validation (25%)
-            timestamp_score = self._validate_timestamp(event, submission)
-            event_score += timestamp_score * 0.25
-            
-            # 2. Geotag validation (25%)
-            geotag_score = self._validate_geotag(event, submission)
-            event_score += geotag_score * 0.25
-            
-            # 3. Event type validation (20%)
-            type_score = self._validate_event_type(event, submission)
-            event_score += type_score * 0.20
-            
-            # 4. Text consistency validation (20%)
-            text_score = self._validate_text_consistency(event, submission)
-            event_score += text_score * 0.20
-            
-            # 5. Processing quality (10%)
-            quality_score = self._validate_processing_quality(event)
-            event_score += quality_score * 0.10
-            
-            total_score += event_score
-        
-        # Add bonus for duplicate detection
-        duplicate_bonus = self._score_duplicate_detection(response, user_submissions)
-        
-        # Average score across all events + duplicate bonus
-        final_score = (total_score / event_count) + duplicate_bonus if event_count > 0 else 0.0
-        
-        return min(1.0, final_score)  # Cap at 1.0
-    
-    def _validate_timestamp(self, event: Any, submission: UserSubmission) -> float:
-        """
-        Validate timestamp consistency between event and submission
-        
-        Full score if within tolerance, linear decay outside
-        """
-        if not hasattr(event, 'processing_timestamp') or not submission.timestamp:
-            return 0.5  # Partial credit if timestamps are missing
-        
-        # Calculate time difference in minutes
-        time_diff = abs((event.processing_timestamp - submission.timestamp).total_seconds()) / 60
-        tolerance = self.validation_thresholds["timestamp_tolerance_minutes"]
-        
-        if time_diff <= tolerance:
-            return 1.0  # Perfect score within tolerance
+                bt.logging.warning(f"⚠️ OpenAI report generation failed: {e}, using template")
+                report_text = self._template_generate_crime_report(crime_type, location, time_ref)
         else:
-            # Linear decay beyond tolerance
-            return max(0.0, 1.0 - (time_diff - tolerance) / tolerance)
-    
-    def _validate_geotag(self, event: Any, submission: UserSubmission) -> float:
-        """Validate geotag consistency between event and submission"""
-        if not submission.geotag:
-            return 0.5  # Partial credit if no geotag provided
-        
-        # Extract coordinates from event (would need proper implementation)
-        event_coords = self._extract_coordinates_from_event(event, submission)
-        if not event_coords:
-            return 0.3  # Low score if coordinates not found in event
-        
-        # Calculate distance
-        lat_diff = abs(event_coords[0] - submission.geotag["lat"])
-        lng_diff = abs(event_coords[1] - submission.geotag["lng"])
-        distance_deg = (lat_diff**2 + lng_diff**2)**0.5
-        
-        # Convert to meters (rough approximation: 1 degree ≈ 111km)
-        distance_meters = distance_deg * 111000
-        tolerance = self.validation_thresholds["geotag_tolerance_meters"]
-        
-        if distance_meters <= tolerance:
-            return 1.0
-        else:
-            return max(0.0, 1.0 - (distance_meters - tolerance) / tolerance)
-    
-    def _extract_coordinates_from_event(self, event: Any, submission: UserSubmission) -> Tuple[float, float]:
-        """Extract coordinates from event (placeholder implementation)"""
-        # In production, this would parse the event content for location information
-        # For now, return submission coordinates as fallback
-        return (submission.geotag["lat"], submission.geotag["lng"])
-    
-    def _validate_event_type(self, event: Any, submission: UserSubmission) -> float:
-        """Validate event type classification accuracy"""
-        if not hasattr(submission, 'incident_type') or not hasattr(event, 'event_type'):
-            return 0.5
-        
-        # Simple matching for now
-        if event.event_type.lower() == submission.incident_type.lower():
-            return 1.0
-        
-        # Partial credit for related types
-        related_types = {
-            "accident": ["crash", "collision", "traffic"],
-            "theft": ["robbery", "burglary", "stolen"],
-            "assault": ["fight", "violence", "attack"]
+            report_text = self._template_generate_crime_report(crime_type, location, time_ref)
+            
+        # Create the expected answer for scoring
+        expected_answer = {
+            "crime_type": crime_type,
+            "location": location,
+            "time_ref": time_ref,
+            "severity": self._determine_expected_severity(crime_type),
+            "expected_entities": self._get_expected_entities(crime_type, location)
         }
         
-        for main_type, variants in related_types.items():
-            if (submission.incident_type.lower() == main_type and 
-                event.event_type.lower() in variants):
-                return 0.7
+        report = {
+            "text": report_text,
+            "expected": expected_answer,
+            "request_id": str(uuid.uuid4()),
+            "generated_at": time.time()
+        }
         
-        return 0.0
-    
-    def _validate_text_consistency(self, event: Any, submission: UserSubmission) -> float:
-        """Validate text consistency between event summary and submission"""
-        if not hasattr(event, 'summary') or not submission.text_description:
-            return 0.5
+        bt.logging.info(f"📝 Generated {crime_type} report: {report_text[:100]}...")
+        return report
+
+    async def _openai_generate_crime_report(self, crime_type: str, location: str, time_ref: str) -> str:
+        """
+        Use OpenAI to generate realistic crime reports
+        """
+        prompt = f"""
+        Generate a realistic crime report for law enforcement training. 
+
+        Details:
+        - Crime type: {crime_type}
+        - Location: {location}
+        - Time: {time_ref}
+
+        Write a 2-3 sentence crime report that sounds like it came from a police report or witness statement. 
+        Include specific details about what happened, who was involved, and any evidence.
+        Make it realistic but not graphic.
+
+        Example format: "Witness reported seeing two individuals breaking into a red sedan in the downtown parking lot yesterday evening around 7pm. One suspect was wearing a black hoodie and the other had a blue baseball cap. The suspects fled on foot when approached by security."
+
+        Write ONLY the crime report text, no additional formatting or explanation.
+        """
         
-        # Simple word overlap check
-        event_words = set(event.summary.lower().split())
-        submission_words = set(submission.text_description.lower().split())
+        try:
+            response = self.openai_client.chat.completions.create(
+                model=self.openai_config["model"],
+                messages=[
+                    {"role": "system", "content": "You are a police report writer. Generate realistic but training-appropriate crime reports."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=self.openai_config["max_tokens"],
+                temperature=self.openai_config["temperature"]
+            )
+            
+            report_text = response.choices[0].message.content.strip()
+            bt.logging.info(f"🤖 OpenAI generated crime report")
+            return report_text
+            
+        except Exception as e:
+            bt.logging.error(f"❌ OpenAI report generation error: {e}")
+            raise
+
+    def _template_generate_crime_report(self, crime_type: str, location: str, time_ref: str) -> str:
+        """
+        Generate crime report using templates (fallback)
+        """
+        templates = {
+            "theft": f"Victim reported that their wallet was stolen from their car in the {location} {time_ref}. Suspect described as wearing dark clothing and fled on foot.",
+            "assault": f"Witness reported seeing an individual being attacked in the {location} {time_ref}. Victim sustained minor injuries and suspect fled the scene.",
+            "vandalism": f"Property damage reported at {location} {time_ref}. Windows were broken and graffiti was spray-painted on the building walls.",
+            "burglary": f"Homeowner discovered break-in at their residence in {location} {time_ref}. Items missing include electronics and jewelry.",
+            "fraud": f"Victim reported receiving suspicious phone calls requesting personal information {time_ref}. Caller claimed to be from bank security.",
+            "traffic_violation": f"Multiple witnesses reported reckless driving incident in {location} {time_ref}. Vehicle was speeding and ran red light.",
+        }
         
-        if not event_words or not submission_words:
-            return 0.3
+        report = templates.get(crime_type, f"Incident reported in {location} {time_ref}. Details are being investigated by local authorities.")
+        bt.logging.info(f"📋 Generated template-based {crime_type} report")
+        return report
+
+    async def _query_miners(self, miner_uids: List[int], crime_report: Dict[str, Any]) -> List[Tuple[int, CrimeReportAnalysisRequest]]:
+        """
+        Send crime report to miners and collect their responses
+        """
+        bt.logging.info(f"📤 Sending crime report to {len(miner_uids)} miners")
         
-        overlap = len(event_words.intersection(submission_words))
-        total_unique = len(event_words.union(submission_words))
+        # Create the request synapse
+        request = CrimeReportAnalysisRequest(
+            crime_report_text=crime_report["text"],
+            request_id=crime_report["request_id"],
+            timestamp=time.time()
+        )
         
-        consistency = overlap / total_unique if total_unique > 0 else 0.0
-        return min(1.0, consistency * 2)  # Scale up to reward good overlap
-    
-    def _validate_processing_quality(self, event: Any) -> float:
-        """Validate the overall quality of event processing"""
-        quality_score = 0.0
+        responses = []
         
-        # Check if event has required fields
-        required_fields = ['event_id', 'summary', 'confidence_score']
-        for field in required_fields:
-            if hasattr(event, field) and getattr(event, field):
-                quality_score += 0.3
+        # Query miners asynchronously
+        try:
+            # Send requests to miners using dendrite
+            miner_responses = await self.dendrite(
+                axons=[self.metagraph.axons[uid] for uid in miner_uids],
+                synapse=request,
+                deserialize=True,
+                timeout=30.0
+            )
+            
+            # Collect valid responses
+            for i, response in enumerate(miner_responses):
+                uid = miner_uids[i]
+                if response is not None:
+                    responses.append((uid, response))
+                    bt.logging.info(f"✅ Received response from miner {uid}")
+                else:
+                    bt.logging.warning(f"⚠️ No response from miner {uid}")
+                    
+        except Exception as e:
+            bt.logging.error(f"❌ Error querying miners: {e}")
+            
+        return responses
+
+    def _score_responses(self, responses: List[Tuple[int, CrimeReportAnalysisRequest]], crime_report: Dict[str, Any]) -> Dict[int, float]:
+        """
+        Score miner responses based on analysis quality
+        """
+        scores = {}
+        expected = crime_report["expected"]
         
-        # Check confidence score range
-        if hasattr(event, 'confidence_score'):
-            conf = getattr(event, 'confidence_score', 0)
-            if 0.0 <= conf <= 1.0:
-                quality_score += 0.1
+        bt.logging.info(f"📊 Scoring {len(responses)} miner responses")
         
-        return min(1.0, quality_score)
-    
-    def _score_duplicate_detection(self, response: Any, 
-                                 user_submissions: List[UserSubmission]) -> float:
-        """Score the miner's duplicate detection capability"""
-        # This would implement actual duplicate detection scoring
-        # For now, give a small bonus if processing metadata indicates duplicate detection
-        if hasattr(response, 'processing_metadata'):
-            metadata = response.processing_metadata
-            if isinstance(metadata, dict) and metadata.get('duplicates_detected', 0) >= 0:
-                return 0.05  # Small bonus
+        for uid, response in responses:
+            try:
+                score = self._score_single_response(response, expected)
+                scores[uid] = score
+                bt.logging.info(f"🎯 Miner {uid} scored: {score:.3f}")
+            except Exception as e:
+                bt.logging.error(f"❌ Error scoring miner {uid}: {e}")
+                scores[uid] = 0.0
+                
+        return scores
+
+    def _score_single_response(self, response: CrimeReportAnalysisRequest, expected: Dict[str, Any]) -> float:
+        """
+        Score a single miner response
+        """
+        if not response.analyzed_events:
+            return 0.0
+            
+        total_score = 0.0
+        max_score = 0.0
         
-        return 0.0
-    
-    async def _update_weights(self, scores: List[float], miner_uids: List[int]):
-        """Update miner weights based on validation scores"""
-        if not scores or not miner_uids:
-            return
+        # Score each analyzed event
+        for event in response.analyzed_events:
+            event_score = 0.0
+            max_event_score = 100.0
+            
+            # Crime type accuracy (30 points)
+            if event.get("event_type") == expected["crime_type"]:
+                event_score += 30.0
+            elif event.get("event_type") in ["other", expected["crime_type"]]:
+                event_score += 15.0  # Partial credit
+                
+            # Location detection (20 points)
+            event_location = event.get("location", "").lower()
+            expected_location = expected["location"].lower()
+            if expected_location in event_location or event_location in expected_location:
+                event_score += 20.0
+            elif event_location != "location not specified":
+                event_score += 10.0  # Partial credit for any location
+                
+            # Time detection (20 points)  
+            event_time = event.get("time_info", "").lower()
+            expected_time = expected["time_ref"].lower()
+            if any(word in event_time for word in expected_time.split()):
+                event_score += 20.0
+            elif event_time != "time not specified":
+                event_score += 10.0  # Partial credit for any time
+                
+            # Entity extraction (15 points)
+            event_entities = event.get("entities", [])
+            if len(event_entities) > 0:
+                entity_score = min(15.0, len(event_entities) * 3.0)
+                event_score += entity_score
+                
+            # Confidence calibration (10 points)
+            confidence = event.get("confidence", 0.0)
+            if 0.3 <= confidence <= 0.9:  # Reasonable confidence range
+                event_score += 10.0
+            elif confidence > 0.0:
+                event_score += 5.0  # Partial credit
+                
+            # Summary quality (5 points)
+            summary = event.get("summary", "")
+            if len(summary) > 10:  # Non-trivial summary
+                event_score += 5.0
+                
+            total_score += event_score
+            max_score += max_event_score
+            
+        # Normalize to 0-1 range
+        if max_score > 0:
+            final_score = total_score / max_score
+        else:
+            final_score = 0.0
+            
+        # Bonus for processing time (fast but accurate)
+        processing_time = response.processing_time
+        if processing_time > 0 and processing_time < 10.0:  # Under 10 seconds
+            time_bonus = max(0, (10.0 - processing_time) / 100.0)  # Small bonus
+            final_score += time_bonus
+            
+        # Penalty for too many events (likely hallucination)
+        if len(response.analyzed_events) > 3:
+            final_score *= 0.8
+            
+        return min(1.0, max(0.0, final_score))
+
+    def _determine_expected_severity(self, crime_type: str) -> str:
+        """Determine expected severity based on crime type"""
+        high_severity = ["assault", "robbery", "arson"]
+        medium_severity = ["burglary", "theft", "fraud", "drug_offense"]
         
-        bt.logging.info(f"🔄 Updating weights for {len(miner_uids)} miners")
+        if crime_type in high_severity:
+            return "high"
+        elif crime_type in medium_severity:
+            return "medium"
+        else:
+            return "low"
+
+    def _get_expected_entities(self, crime_type: str, location: str) -> List[str]:
+        """Get expected entities based on crime type and location"""
+        entities = []
         
-        # Update scores for miners
-        for uid, score in zip(miner_uids, scores):
-            if uid < len(self.scores):
-                # Update moving average
-                alpha = 0.1  # Learning rate
-                self.scores[uid] = alpha * score + (1 - alpha) * self.scores[uid]
+        # Location-based entities
+        if "parking" in location:
+            entities.extend(["car", "vehicle"])
+        elif "store" in location or "mall" in location:
+            entities.extend(["merchandise", "cash register"])
+        elif "school" in location:
+            entities.extend(["student", "teacher"])
+            
+        # Crime-type based entities
+        if crime_type in ["theft", "burglary", "robbery"]:
+            entities.extend(["suspect", "victim", "stolen items"])
+        elif crime_type == "assault":
+            entities.extend(["attacker", "victim", "witness"])
+        elif crime_type == "vandalism":
+            entities.extend(["damage", "graffiti", "property"])
+            
+        return entities
+
+    def _set_weights(self, scores: Dict[int, float]):
+        """Set weights based on miner scores"""
+        bt.logging.info(f"⚖️ Setting weights for {len(scores)} miners")
         
-        bt.logging.info(f"📊 Average scores: {np.mean(scores):.3f}")
-    
-    async def _store_validation_results(self, submissions: List[UserSubmission],
-                                      responses: List[Any],
-                                      scores: List[float]):
-        """Store validation results and update statistics"""
-        self.validation_stats["total_submissions"] += len(submissions)
-        self.validation_stats["successful_validations"] += len([s for s in scores if s > 0.5])
+        # Create weight vector
+        weights = torch.zeros(len(self.metagraph.hotkeys))
         
-        bt.logging.info(f"📈 Validation Stats: {self.validation_stats}")
+        for uid, score in scores.items():
+            if uid < len(weights):
+                weights[uid] = score
+                
+        # Normalize weights
+        if weights.sum() > 0:
+            weights = weights / weights.sum()
+        
+        # Set weights on chain
+        try:
+            success = self.subtensor.set_weights(
+                wallet=self.wallet,
+                netuid=self.config.netuid,
+                uids=torch.arange(len(weights)),
+                weights=weights,
+                wait_for_inclusion=True,
+                wait_for_finalization=True,
+            )
+            
+            if success:
+                bt.logging.info(f"✅ Successfully set weights on chain")
+            else:
+                bt.logging.error(f"❌ Failed to set weights on chain")
+                
+        except Exception as e:
+            bt.logging.error(f"❌ Error setting weights: {e}")
+
+    def run(self):
+        """
+        Run method for Luminar Validator
+        """
+        # Check that validator is registered on the network.
+        self.sync()
+
+        bt.logging.info(f"Luminar Validator Version {self.version} starting at block: {self.block}")
+
+        # This loop maintains the validator's operations until intentionally stopped.
+        try:
+            while True:
+                bt.logging.info(f"🔄 Validation step({self.step}) block({self.block})")
+
+                # Run single forward for crime report analysis
+                self.loop.run_until_complete(self.forward())
+
+                # Check if we should exit.
+                if self.should_exit:
+                    break
+
+                # Sync metagraph and potentially set weights.
+                self.sync()
+
+                self.step += 1
+                
+                # Sleep between validation rounds to avoid overwhelming miners
+                # Crime report analysis doesn't need to be as frequent as other subnets
+                time.sleep(60)  # 1 minute between validation rounds
+
+        # If someone intentionally stops the validator, it'll safely terminate operations.
+        except KeyboardInterrupt:
+            self.axon.stop()
+            bt.logging.success("Validator killed by keyboard interrupt.")
+            exit()
+
+        # In case of unforeseen errors, the validator will log the error and continue operations.
+        except Exception as err:
+            bt.logging.error(f"Error during validation: {str(err)}")
+            bt.logging.debug(str(err))
 
 
-# The main function parses the configuration and runs the validator.
+# This is the main function, which runs the validator.
 if __name__ == "__main__":
-    with Validator() as validator:
-        while True:
-            bt.logging.info(f"🚀 Luminar Validator running... {time.time()}")
-            bt.logging.info(f"📊 Stats: {validator.validation_stats}")
-            time.sleep(5)
+    validator = Validator()
+    bt.logging.info(f"🔄 Validator Version {validator.version} starting...")
+    try:
+        validator.run()
+    except KeyboardInterrupt:
+        bt.logging.success("Validator killed by keyboard interrupt.")
+        exit()
+    except Exception as e:
+        bt.logging.error(f"Error starting validator: {e}")
+        exit(1)

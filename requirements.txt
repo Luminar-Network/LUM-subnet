@@ -37,7 +37,7 @@ torch>=2.0.0              # Large package, install separately if needed
 # torchvision>=0.15.0       # Depends on torch
 # opencv-python>=4.8.0      # May have build issues
 # clip-by-openai>=1.0       # Depends on torch
-# openai>=1.0.0             # Can install separately
+openai>=1.0.0
 # pillow>=9.0.0             # Can install separately
 
 pillow>=11.0.0
