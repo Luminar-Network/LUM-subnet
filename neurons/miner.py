@@ -75,7 +75,14 @@ class Miner(BaseMinerNeuron):
         self.crime_types = [
             "theft", "burglary", "robbery", "assault", "vandalism", 
             "fraud", "drug_offense", "traffic_violation", "domestic_violence",
-            "cybercrime", "harassment", "trespassing", "arson", "other"
+            "cybercrime", "harassment", "trespassing", "arson", "homicide",
+            "sexual_assault", "kidnapping", "extortion", "money_laundering",
+            "identity_theft", "embezzlement", "forgery", "counterfeiting",
+            "weapon_offense", "public_disorder", "loitering", "stalking",
+            "child_abuse", "elder_abuse", "hate_crime", "terrorism",
+            "smuggling", "human_trafficking", "prostitution", "gambling",
+            "bribery", "corruption", "tax_evasion", "conspiracy",
+            "noise_complaint", "littering", "public_intoxication", "other"
         ]
         
         # Severity levels
@@ -259,7 +266,7 @@ class Miner(BaseMinerNeuron):
         {report_text}
 
         For each event found, extract:
-        - event_type: Type of crime (theft, assault, burglary, vandalism, fraud, drug_offense, traffic_violation, domestic_violence, cybercrime, harassment, trespassing, arson, other)
+        - event_type: Type of crime (theft, burglary, robbery, assault, vandalism, fraud, drug_offense, traffic_violation, domestic_violence, cybercrime, harassment, trespassing, arson, homicide, sexual_assault, kidnapping, extortion, money_laundering, identity_theft, embezzlement, forgery, counterfeiting, weapon_offense, public_disorder, loitering, stalking, child_abuse, elder_abuse, hate_crime, terrorism, smuggling, human_trafficking, prostitution, gambling, bribery, corruption, tax_evasion, conspiracy, noise_complaint, littering, public_intoxication, other)
         - severity: Severity level (low, medium, high)
         - location: Location information mentioned
         - time_info: Time/date information mentioned  
@@ -271,10 +278,10 @@ class Miner(BaseMinerNeuron):
         [{{
             "event_type": "theft",
             "severity": "medium", 
-            "location": "downtown parking lot",
-            "time_info": "yesterday evening around 7pm",
-            "entities": ["red car", "suspect in black jacket", "wallet"],
-            "summary": "Theft of wallet from red car in downtown parking lot",
+            "location": "1245 Main Street, Downtown District",
+            "time_info": "September 6, 2025 at approximately 7:00 PM",
+            "entities": ["red sedan", "suspect in black hoodie", "suspect in blue baseball cap", "security personnel"],
+            "summary": "Vehicle break-in at 1245 Main Street parking lot with two suspects fleeing eastbound",
             "confidence": 0.85
         }}]
         """
@@ -300,7 +307,7 @@ class Miner(BaseMinerNeuron):
                 content = content[:-3]
                 
             events = json.loads(content)
-            
+            bt.logging.info(f"content: {events}")
             # Validate and clean the events
             validated_events = []
             for event in events:
@@ -325,12 +332,32 @@ class Miner(BaseMinerNeuron):
         
         # Simple pattern matching for crime types
         crime_patterns = {
-            "theft": r"(stol|theft|steal|rob|burglar|loot)",
-            "assault": r"(assault|attack|hit|punch|fight|violence)",
-            "vandalism": r"(vandal|damage|destroy|graffiti|break)",
-            "fraud": r"(fraud|scam|cheat|deceive|fake)",
-            "drug_offense": r"(drug|narcotic|cocaine|marijuana|heroin)",
-            "traffic_violation": r"(speeding|traffic|accident|crash|collision)",
+            "theft": r"(stol|theft|steal|rob|burglar|loot|shoplifting|pickpocket)",
+            "burglary": r"(burglar|break.?in|breaking.?and.?entering|home.?invasion)",
+            "robbery": r"(robbery|armed.?robbery|mugging|holdup|stick.?up)",
+            "assault": r"(assault|attack|hit|punch|fight|violence|battery|beating)",
+            "vandalism": r"(vandal|damage|destroy|graffiti|break|smash|deface)",
+            "fraud": r"(fraud|scam|cheat|deceive|fake|forgery|embezzle|swindle)",
+            "drug_offense": r"(drug|narcotic|cocaine|marijuana|heroin|meth|possession|dealing|trafficking)",
+            "traffic_violation": r"(speeding|traffic|accident|crash|collision|reckless.?driving|dui|dwi)",
+            "domestic_violence": r"(domestic|family.?violence|spousal.?abuse|partner.?abuse)",
+            "cybercrime": r"(cyber|hacking|phishing|malware|identity.?theft|online.?fraud)",
+            "harassment": r"(harass|stalking|threatening|intimidation|bullying)",
+            "trespassing": r"(trespass|unlawful.?entry|no.?trespassing|unauthorized.?access)",
+            "arson": r"(arson|fire.?setting|intentional.?fire|burning)",
+            "homicide": r"(murder|homicide|killing|manslaughter|assassination)",
+            "sexual_assault": r"(sexual.?assault|rape|sexual.?abuse|molestation)",
+            "kidnapping": r"(kidnap|abduction|false.?imprisonment|unlawful.?detention)",
+            "extortion": r"(extortion|blackmail|racketeering|protection.?money)",
+            "money_laundering": r"(money.?laundering|financial.?crime|illegal.?funds)",
+            "weapon_offense": r"(weapon|gun|firearm|knife|illegal.?possession|concealed.?weapon)",
+            "public_disorder": r"(riot|disturbance|disorderly.?conduct|public.?nuisance)",
+            "hate_crime": r"(hate.?crime|bias.?crime|discrimination|racial.?attack)",
+            "human_trafficking": r"(human.?trafficking|sex.?trafficking|forced.?labor)",
+            "bribery": r"(bribery|corruption|kickback|under.?the.?table)",
+            "counterfeiting": r"(counterfeit|fake.?money|forged.?documents|illegal.?reproduction)",
+            "noise_complaint": r"(noise|loud|disturbance|excessive.?sound)",
+            "public_intoxication": r"(drunk|intoxicated|under.?influence|public.?drunkenness)"
         }
         
         text_lower = report_text.lower()
@@ -366,7 +393,7 @@ class Miner(BaseMinerNeuron):
                 "summary": "General incident report",
                 "confidence": 0.3
             })
-            
+        bt.logging.info(f"content: {events}")    
         bt.logging.info(f"🔍 Rule-based analysis extracted {len(events)} events")
         return events
 
@@ -405,10 +432,14 @@ class Miner(BaseMinerNeuron):
 
     def _extract_location(self, text: str) -> str:
         """Extract location information from text"""
-        # Simple location extraction patterns
+        # Enhanced location extraction patterns
         location_patterns = [
-            r"(?:at|in|on|near)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)",
-            r"([A-Z][a-z]+\s+(?:street|road|avenue|blvd|park|school|store|mall))",
+            r"(?:at|in|on|near)\s+(\d+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl)))",
+            r"(?:at|in|on|near)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Place|Pl)))",
+            r"([A-Z][a-z]+\s+(?:street|road|avenue|blvd|boulevard|drive|lane|court|place|park|school|store|mall|hospital|bank|restaurant|gas\s+station|parking\s+lot))",
+            r"(?:downtown|uptown|midtown|suburb|district|neighborhood|area)",
+            r"(\d+\s+block\s+of\s+[A-Z][a-z]+)",
+            r"(intersection\s+of\s+[A-Z][a-z]+\s+and\s+[A-Z][a-z]+)"
         ]
         
         for pattern in location_patterns:
@@ -420,18 +451,28 @@ class Miner(BaseMinerNeuron):
 
     def _extract_time(self, text: str) -> str:
         """Extract time/date information from text"""
-        # Time extraction patterns
+        # Enhanced time extraction patterns
         time_patterns = [
-            r"(yesterday|today|tomorrow|last\s+\w+|this\s+\w+)",
-            r"(\d{1,2}:\d{2}\s*(?:am|pm)?)",
-            r"(morning|afternoon|evening|night)",
+            r"(yesterday|today|tomorrow|last\s+\w+|this\s+\w+|next\s+\w+)",
+            r"(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)",
+            r"(morning|afternoon|evening|night|dawn|dusk|midnight|noon)",
             r"(\d{1,2}/\d{1,2}/\d{2,4})",
+            r"(\d{4}-\d{2}-\d{2})",
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}",
+            r"(\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})",
+            r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)",
+            r"(around|approximately|about)\s+(\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)?)",
+            r"(between\s+\d{1,2}:\d{2}\s*(?:am|pm)?\s+and\s+\d{1,2}:\d{2}\s*(?:am|pm)?)",
+            r"(early|late)\s+(morning|afternoon|evening|night)"
         ]
         
         times = []
         for pattern in time_patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
-            times.extend(matches)
+            if isinstance(matches[0], tuple) if matches else False:
+                times.extend([match for match_tuple in matches for match in match_tuple if match])
+            else:
+                times.extend(matches)
             
         return " ".join(times) if times else "time not specified"
 
@@ -439,20 +480,40 @@ class Miner(BaseMinerNeuron):
         """Extract entities (people, vehicles, objects) from text"""
         entities = []
         
-        # Vehicle patterns
-        vehicle_patterns = r"(car|truck|motorcycle|bike|vehicle|van|suv|sedan)"
+        # Enhanced vehicle patterns
+        vehicle_patterns = r"(car|truck|motorcycle|bike|vehicle|van|suv|sedan|pickup|bus|taxi|limousine|scooter|atv|rv|trailer)"
         vehicles = re.findall(vehicle_patterns, text, re.IGNORECASE)
         entities.extend([f"{v} (vehicle)" for v in vehicles])
         
-        # Color + object patterns
-        color_patterns = r"(red|blue|green|yellow|black|white|gray|silver)\s+(\w+)"
+        # Enhanced color + object patterns
+        color_patterns = r"(red|blue|green|yellow|black|white|gray|grey|silver|brown|orange|purple|pink|gold|tan|maroon)\s+(\w+)"
         colored_objects = re.findall(color_patterns, text, re.IGNORECASE)
         entities.extend([f"{color} {obj}" for color, obj in colored_objects])
         
-        # Person indicators
-        person_patterns = r"(suspect|person|man|woman|individual|guy|girl)"
+        # Enhanced person indicators
+        person_patterns = r"(suspect|person|man|woman|individual|guy|girl|male|female|teenager|adult|child|elderly|victim|witness|perpetrator|accomplice|driver|passenger|pedestrian)"
         persons = re.findall(person_patterns, text, re.IGNORECASE)
         entities.extend([f"{p} (person)" for p in persons])
+        
+        # Weapon patterns
+        weapon_patterns = r"(gun|knife|weapon|pistol|rifle|shotgun|blade|firearm|revolver|machete|bat|club|hammer)"
+        weapons = re.findall(weapon_patterns, text, re.IGNORECASE)
+        entities.extend([f"{w} (weapon)" for w in weapons])
+        
+        # Object patterns
+        object_patterns = r"(wallet|purse|phone|laptop|jewelry|cash|credit\s+card|bag|backpack|briefcase|watch|necklace|ring|earrings)"
+        objects = re.findall(object_patterns, text, re.IGNORECASE)
+        entities.extend([f"{obj} (object)" for obj in objects])
+        
+        # Building/location type patterns
+        building_patterns = r"(house|apartment|building|store|shop|bank|school|hospital|restaurant|office|warehouse|garage|shed)"
+        buildings = re.findall(building_patterns, text, re.IGNORECASE)
+        entities.extend([f"{b} (building)" for b in buildings])
+        
+        # License plate patterns
+        license_patterns = r"([A-Z]{2,3}[-\s]?\d{2,4}|license\s+plate\s+[A-Z0-9\-\s]+)"
+        licenses = re.findall(license_patterns, text, re.IGNORECASE)
+        entities.extend([f"{lic} (license plate)" for lic in licenses])
         
         return list(set(entities))  # Remove duplicates
 
@@ -461,16 +522,34 @@ class Miner(BaseMinerNeuron):
         text_lower = text.lower()
         
         # High severity indicators
-        high_severity = ["weapon", "gun", "knife", "injured", "hospital", "blood", "violent", "serious"]
+        high_severity = [
+            "weapon", "gun", "knife", "injured", "hospital", "blood", "violent", "serious",
+            "murder", "homicide", "rape", "sexual assault", "kidnapping", "terrorism",
+            "armed robbery", "death", "killed", "shot", "stabbed", "critical condition",
+            "life threatening", "emergency", "ambulance", "surgery"
+        ]
         if any(word in text_lower for word in high_severity):
             return "high"
             
         # Medium severity indicators
-        medium_severity = ["damage", "hurt", "threat", "broke", "stolen", "lost"]
+        medium_severity = [
+            "damage", "hurt", "threat", "broke", "stolen", "lost", "assault", "fight",
+            "burglary", "fraud", "drug dealing", "trafficking", "vandalism", "arson",
+            "domestic violence", "harassment", "stalking", "extortion", "bribery",
+            "embezzlement", "identity theft", "cybercrime", "hacking"
+        ]
         if any(word in text_lower for word in medium_severity):
             return "medium"
             
-        return "low"
+        # Low severity indicators (or default)
+        low_severity = [
+            "noise", "littering", "loitering", "minor", "petty", "misdemeanor",
+            "traffic violation", "public intoxication", "disturbing peace"
+        ]
+        if any(word in text_lower for word in low_severity):
+            return "low"
+            
+        return "low"  # Default to low if no clear indicators
 
     def _calculate_overall_confidence(self, events: List[Dict[str, Any]]) -> float:
         """Calculate overall confidence score for the analysis"""
