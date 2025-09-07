@@ -100,17 +100,51 @@ class Validator(BaseValidatorNeuron):
             "159 Tech Center, Innovation District", "357 Government Plaza, Civic Center"
         ]
         
-        # Enhanced time references with proper dates
-        self.time_references = [
-            "September 6, 2025 at approximately 7:00 PM", "September 5, 2025 around 10:30 AM",
-            "September 4, 2025 during late evening hours", "September 6, 2025 at 2:15 PM",
-            "September 3, 2025 in the early morning", "September 5, 2025 at midnight",
-            "September 4, 2025 during rush hour traffic", "September 6, 2025 on weekend afternoon",
-            "September 2, 2025 between 11:00 PM and 1:00 AM", "September 5, 2025 at dawn",
-            "September 6, 2025 during business hours", "September 4, 2025 late at night"
-        ]
+        # Dynamic time references will be generated in _get_dynamic_time_reference()
+        # This ensures times stay current and don't become outdated
         
         bt.logging.info(f"🚀 Luminar Validator Version {self.version} initialized")
+        
+    def _get_dynamic_time_reference(self) -> str:
+        """Generate dynamic time references that stay current"""
+        now = datetime.now()
+        
+        # Calculate relative dates dynamically
+        yesterday = now - timedelta(days=1)
+        two_days_ago = now - timedelta(days=2)
+        three_days_ago = now - timedelta(days=3)
+        last_week = now - timedelta(days=7)
+        
+        # Get day names
+        yesterday_name = yesterday.strftime("%A")
+        two_days_ago_name = two_days_ago.strftime("%A")
+        
+        # Dynamic time reference templates
+        time_templates = [
+            f"{yesterday.strftime('%B %d, %Y')} at approximately 7:00 PM",
+            f"{yesterday.strftime('%B %d, %Y')} around 10:30 AM", 
+            f"{two_days_ago.strftime('%B %d, %Y')} during late evening hours",
+            f"{now.strftime('%B %d, %Y')} at 2:15 PM",
+            f"{three_days_ago.strftime('%B %d, %Y')} in the early morning",
+            f"{yesterday.strftime('%B %d, %Y')} at midnight",
+            f"{yesterday.strftime('%B %d, %Y')} during rush hour traffic",
+            f"{last_week.strftime('%B %d, %Y')} on weekend afternoon",
+            f"{two_days_ago.strftime('%B %d, %Y')} between 11:00 PM and 1:00 AM",
+            f"{now.strftime('%B %d, %Y')} at dawn",
+            f"{now.strftime('%B %d, %Y')} during business hours",
+            f"{yesterday.strftime('%B %d, %Y')} late at night",
+            f"last {yesterday_name} evening",
+            f"this past {two_days_ago_name} morning",
+            f"over the weekend",
+            f"last week around noon",
+            f"a few hours ago",
+            f"yesterday afternoon",
+            f"last {yesterday_name} night",
+            f"this past {two_days_ago_name} evening",
+            f"early yesterday morning"
+        ]
+        
+        return random.choice(time_templates)
         
     def _initialize_openai(self):
         """Initialize OpenAI client for crime report generation"""
@@ -183,14 +217,14 @@ class Validator(BaseValidatorNeuron):
         # Select random scenario components
         crime_type = random.choice(self.crime_scenarios)
         location = random.choice(self.locations)
-        time_ref = random.choice(self.time_references)
+        time_ref = self._get_dynamic_time_reference()  # Generate dynamic time reference
         
         # Generate report using OpenAI if available
         if self.openai_client:
             try:
                 report_text = await self._openai_generate_crime_report(crime_type, location, time_ref)
             except Exception as e:
-                bt.logging.warning(f"⚠️ OpenAI report generation failed: {e}, using template")
+                bt.logging.warning(f"⚠️ Report generation failed: {e}, using template")
                 report_text = self._template_generate_crime_report(crime_type, location, time_ref)
         else:
             report_text = self._template_generate_crime_report(crime_type, location, time_ref)
@@ -251,7 +285,7 @@ class Validator(BaseValidatorNeuron):
             return report_text
             
         except Exception as e:
-            bt.logging.error(f"❌ OpenAI report generation error: {e}")
+            bt.logging.error(f"❌ Report generation error: {e}")
             raise
 
     def _template_generate_crime_report(self, crime_type: str, location: str, time_ref: str) -> str:
