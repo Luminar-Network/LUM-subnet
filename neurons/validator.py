@@ -79,20 +79,35 @@ class Validator(BaseValidatorNeuron):
         self.crime_scenarios = [
             "theft", "burglary", "robbery", "assault", "vandalism", 
             "fraud", "drug_offense", "traffic_violation", "domestic_violence",
-            "cybercrime", "harassment", "trespassing", "arson"
+            "cybercrime", "harassment", "trespassing", "arson", "homicide",
+            "sexual_assault", "kidnapping", "extortion", "money_laundering",
+            "identity_theft", "embezzlement", "forgery", "counterfeiting",
+            "weapon_offense", "public_disorder", "loitering", "stalking",
+            "child_abuse", "elder_abuse", "hate_crime", "terrorism",
+            "smuggling", "human_trafficking", "prostitution", "gambling",
+            "bribery", "corruption", "tax_evasion", "conspiracy",
+            "noise_complaint", "littering", "public_intoxication"
         ]
         
-        # Common locations for scenarios
+        # Enhanced locations for scenarios
         self.locations = [
-            "downtown area", "residential neighborhood", "shopping mall", 
-            "parking lot", "school campus", "public park", "subway station",
-            "office building", "grocery store", "gas station"
+            "1245 Main Street, Downtown District", "789 Oak Avenue, Residential Area",
+            "456 Commerce Boulevard, Shopping District", "321 University Drive, Campus Area",
+            "654 Park Avenue, Central Park District", "987 Industrial Road, Warehouse District",
+            "147 Hospital Drive, Medical Center", "258 School Street, Education District",
+            "369 Financial Plaza, Business District", "741 Sunset Boulevard, Entertainment District",
+            "852 Harbor View, Waterfront Area", "963 Mountain Road, Suburban Hills",
+            "159 Tech Center, Innovation District", "357 Government Plaza, Civic Center"
         ]
         
-        # Time references
+        # Enhanced time references with proper dates
         self.time_references = [
-            "yesterday evening", "this morning", "last night", "earlier today",
-            "around 3pm", "late at night", "during rush hour", "weekend afternoon"
+            "September 6, 2025 at approximately 7:00 PM", "September 5, 2025 around 10:30 AM",
+            "September 4, 2025 during late evening hours", "September 6, 2025 at 2:15 PM",
+            "September 3, 2025 in the early morning", "September 5, 2025 at midnight",
+            "September 4, 2025 during rush hour traffic", "September 6, 2025 on weekend afternoon",
+            "September 2, 2025 between 11:00 PM and 1:00 AM", "September 5, 2025 at dawn",
+            "September 6, 2025 during business hours", "September 4, 2025 late at night"
         ]
         
         bt.logging.info(f"🚀 Luminar Validator Version {self.version} initialized")
@@ -215,7 +230,7 @@ class Validator(BaseValidatorNeuron):
         Include specific details about what happened, who was involved, and any evidence.
         Make it realistic but not graphic.
 
-        Example format: "Witness reported seeing two individuals breaking into a red sedan in the downtown parking lot yesterday evening around 7pm. One suspect was wearing a black hoodie and the other had a blue baseball cap. The suspects fled on foot when approached by security."
+        Example format: "Witness reported seeing two individuals breaking into a red sedan in the parking lot at 1245 Main Street, Downtown District, on September 6, 2025 at approximately 7:00 PM. One suspect was wearing a black hoodie and the other had a blue baseball cap. The suspects fled on foot eastbound on Main Street when approached by security personnel."
 
         Write ONLY the crime report text, no additional formatting or explanation.
         """
@@ -232,7 +247,7 @@ class Validator(BaseValidatorNeuron):
             )
             
             report_text = response.choices[0].message.content.strip()
-            bt.logging.info(f"🤖 OpenAI generated crime report")
+            bt.logging.info(f"Generated Crime Report: {report_text}")
             return report_text
             
         except Exception as e:
@@ -244,15 +259,26 @@ class Validator(BaseValidatorNeuron):
         Generate crime report using templates (fallback)
         """
         templates = {
-            "theft": f"Victim reported that their wallet was stolen from their car in the {location} {time_ref}. Suspect described as wearing dark clothing and fled on foot.",
-            "assault": f"Witness reported seeing an individual being attacked in the {location} {time_ref}. Victim sustained minor injuries and suspect fled the scene.",
-            "vandalism": f"Property damage reported at {location} {time_ref}. Windows were broken and graffiti was spray-painted on the building walls.",
-            "burglary": f"Homeowner discovered break-in at their residence in {location} {time_ref}. Items missing include electronics and jewelry.",
-            "fraud": f"Victim reported receiving suspicious phone calls requesting personal information {time_ref}. Caller claimed to be from bank security.",
-            "traffic_violation": f"Multiple witnesses reported reckless driving incident in {location} {time_ref}. Vehicle was speeding and ran red light.",
+            "theft": f"Victim reported that their wallet and smartphone were stolen from their vehicle at {location} on {time_ref}. Suspect described as wearing dark clothing and fled on foot toward the nearby intersection.",
+            "burglary": f"Homeowner discovered break-in at their residence at {location} on {time_ref}. Items missing include electronics, jewelry, and cash. Entry was gained through rear window.",
+            "robbery": f"Armed robbery reported at {location} on {time_ref}. Suspect approached victim demanding money while displaying what appeared to be a handgun. Victim complied and suspect fled the scene.",
+            "assault": f"Witness reported seeing an individual being attacked at {location} on {time_ref}. Victim sustained minor injuries and was transported to hospital. Suspect fled before police arrival.",
+            "vandalism": f"Property damage reported at {location} on {time_ref}. Windows were broken and graffiti was spray-painted on building walls. Estimated damage exceeds $500.",
+            "fraud": f"Victim reported receiving suspicious phone calls requesting personal banking information on {time_ref}. Caller claimed to be from bank security department and requested account verification.",
+            "drug_offense": f"Suspicious activity reported at {location} on {time_ref}. Officers observed what appeared to be drug transaction taking place. Two individuals detained for questioning.",
+            "traffic_violation": f"Multiple witnesses reported reckless driving incident at {location} on {time_ref}. Vehicle was speeding excessively and ran multiple red lights before disappearing.",
+            "domestic_violence": f"Domestic disturbance reported at {location} on {time_ref}. Neighbors reported loud arguing and sounds of altercation. Officers responded and separated the parties involved.",
+            "cybercrime": f"Business owner reported computer system breach at {location} discovered on {time_ref}. Unauthorized access to customer database and potential data theft under investigation.",
+            "harassment": f"Victim reported ongoing harassment via phone calls and text messages beginning {time_ref}. Suspect has been making threatening communications despite cease and desist request.",
+            "trespassing": f"Property owner reported unauthorized individuals on private property at {location} on {time_ref}. Suspects were asked to leave but returned later the same evening.",
+            "arson": f"Fire department responded to suspicious fire at {location} on {time_ref}. Investigation revealed evidence of accelerant use. Fire marshal ruling incident as arson.",
+            "homicide": f"Body discovered at {location} on {time_ref}. Victim showed signs of trauma consistent with foul play. Homicide detectives have taken over the investigation.",
+            "weapon_offense": f"Individual reported carrying concealed weapon without permit at {location} on {time_ref}. Suspect was detained and weapon was confiscated by responding officers.",
+            "public_disorder": f"Large disturbance reported at {location} on {time_ref}. Multiple individuals involved in altercation requiring police intervention to restore order.",
+            "noise_complaint": f"Residents reported excessive noise coming from {location} on {time_ref}. Loud music and shouting continued past city noise ordinance hours."
         }
         
-        report = templates.get(crime_type, f"Incident reported in {location} {time_ref}. Details are being investigated by local authorities.")
+        report = templates.get(crime_type, f"Incident of {crime_type} reported at {location} on {time_ref}. Details are being investigated by local authorities and additional information will be released as it becomes available.")
         bt.logging.info(f"📋 Generated template-based {crime_type} report")
         return report
 
@@ -393,37 +419,82 @@ class Validator(BaseValidatorNeuron):
 
     def _determine_expected_severity(self, crime_type: str) -> str:
         """Determine expected severity based on crime type"""
-        high_severity = ["assault", "robbery", "arson"]
-        medium_severity = ["burglary", "theft", "fraud", "drug_offense"]
+        high_severity = [
+            "homicide", "sexual_assault", "kidnapping", "terrorism", "arson",
+            "armed_robbery", "robbery", "assault", "weapon_offense", "human_trafficking"
+        ]
+        medium_severity = [
+            "burglary", "theft", "fraud", "drug_offense", "domestic_violence",
+            "cybercrime", "harassment", "stalking", "extortion", "money_laundering",
+            "embezzlement", "forgery", "counterfeiting", "hate_crime", "child_abuse",
+            "elder_abuse", "identity_theft", "bribery", "corruption"
+        ]
+        low_severity = [
+            "vandalism", "trespassing", "traffic_violation", "public_disorder",
+            "loitering", "noise_complaint", "littering", "public_intoxication",
+            "gambling", "prostitution", "tax_evasion", "conspiracy"
+        ]
         
         if crime_type in high_severity:
             return "high"
         elif crime_type in medium_severity:
             return "medium"
-        else:
+        elif crime_type in low_severity:
             return "low"
+        else:
+            return "medium"  # Default for unknown crime types
 
     def _get_expected_entities(self, crime_type: str, location: str) -> List[str]:
         """Get expected entities based on crime type and location"""
         entities = []
         
-        # Location-based entities
-        if "parking" in location:
-            entities.extend(["car", "vehicle"])
-        elif "store" in location or "mall" in location:
-            entities.extend(["merchandise", "cash register"])
-        elif "school" in location:
-            entities.extend(["student", "teacher"])
+        # Location-based entities (enhanced)
+        if "parking" in location.lower() or "street" in location.lower():
+            entities.extend(["vehicle", "car", "license plate"])
+        elif "store" in location.lower() or "mall" in location.lower() or "shopping" in location.lower():
+            entities.extend(["merchandise", "cash register", "security camera", "customer"])
+        elif "school" in location.lower() or "campus" in location.lower():
+            entities.extend(["student", "teacher", "security guard"])
+        elif "hospital" in location.lower() or "medical" in location.lower():
+            entities.extend(["patient", "medical staff", "security"])
+        elif "bank" in location.lower() or "financial" in location.lower():
+            entities.extend(["teller", "security guard", "cash", "surveillance"])
+        elif "residential" in location.lower() or "house" in location.lower():
+            entities.extend(["homeowner", "neighbor", "property"])
+        elif "office" in location.lower() or "business" in location.lower():
+            entities.extend(["employee", "computer", "documents"])
             
-        # Crime-type based entities
+        # Crime-type based entities (enhanced)
         if crime_type in ["theft", "burglary", "robbery"]:
-            entities.extend(["suspect", "victim", "stolen items"])
+            entities.extend(["suspect", "victim", "stolen items", "witness"])
+            if crime_type == "robbery":
+                entities.extend(["weapon", "threat"])
         elif crime_type == "assault":
-            entities.extend(["attacker", "victim", "witness"])
+            entities.extend(["attacker", "victim", "witness", "injury"])
         elif crime_type == "vandalism":
-            entities.extend(["damage", "graffiti", "property"])
+            entities.extend(["damage", "graffiti", "property", "spray paint"])
+        elif crime_type in ["drug_offense"]:
+            entities.extend(["drugs", "paraphernalia", "dealer", "buyer"])
+        elif crime_type == "traffic_violation":
+            entities.extend(["vehicle", "driver", "license plate", "traffic light"])
+        elif crime_type == "domestic_violence":
+            entities.extend(["victim", "perpetrator", "family member", "residence"])
+        elif crime_type == "cybercrime":
+            entities.extend(["computer", "internet", "data", "hacker"])
+        elif crime_type in ["harassment", "stalking"]:
+            entities.extend(["victim", "perpetrator", "phone", "messages"])
+        elif crime_type == "arson":
+            entities.extend(["fire", "accelerant", "building", "arsonist"])
+        elif crime_type == "homicide":
+            entities.extend(["victim", "body", "weapon", "crime scene"])
+        elif crime_type == "weapon_offense":
+            entities.extend(["weapon", "firearm", "permit", "suspect"])
+        elif crime_type in ["fraud", "identity_theft", "embezzlement"]:
+            entities.extend(["documents", "credit card", "bank account", "victim"])
+        elif crime_type in ["noise_complaint", "public_disorder"]:
+            entities.extend(["noise", "disturbance", "residents", "loud music"])
             
-        return entities
+        return list(set(entities))  # Remove duplicates
 
     def _set_weights(self, scores: Dict[int, float]):
         """Set weights based on miner scores"""
