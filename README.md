@@ -90,7 +90,7 @@ graph TB
 | Confidence | 10% | Reasonable confidence calibration |
 | Summary | 5% | Informative event summaries |
 
-## 🚀 Luminar Developer Roadmap
+## Luminar Developer Roadmap
 
 We're building the future of decentralized forensic intelligence. Here's what's coming:
 
