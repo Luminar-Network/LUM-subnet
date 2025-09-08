@@ -90,32 +90,29 @@ graph TB
 | Confidence | 10% | Reasonable confidence calibration |
 | Summary | 5% | Informative event summaries |
 
-## 🚀 Subnet Roadmap (Q2 2026)
+## 🚀 Luminar Developer Roadmap
 
 We're building the future of decentralized forensic intelligence. Here's what's coming:
 
-### 🔍 Chat-Driven Investigator Interface
-Query videos via natural language - ask questions like "Show me all red vehicles involved in accidents" and get instant results.
+### 🔍 Chat-Driven Investigation Interface
+- Natural language querying of video content
+- Highlight key frames and insights dynamically
+- Conversational interface for investigative workflows
 
-### 🎯 Expanded Auto Mode
-Enhanced detection capabilities including:
-- **Clothing colors** - Identify suspects by attire
-- **Object types** - Classify weapons, tools, and evidence
-- **Vehicle attributes** - Make, model, color, and damage assessment
+### 🎯 Enhanced Automated Detection
+- Attribute detection: clothing, objects, and vehicles
+- Real-time recognition of key features for rapid analysis
+- Scalable detection pipelines for large video datasets
 
 ### 📊 Event Clustering & Timelines
-Transform raw detections into structured incident reports:
-- Automatic event correlation
-- Timeline reconstruction
-- Cross-reference validation
-- Evidence chain analysis
+- Aggregate raw detections into structured incident events
+- Automatic timeline generation for chronological context
+- Exportable reports suitable for integration into case management systems
 
-### 🛠️ SDKs & APIs
-Developer tools to build custom forensic applications on Luminar:
-- RESTful APIs for integration
-- Python SDK for rapid development
-- Webhook support for real-time updates
-- Custom model training interfaces
+### 🛠️ SDKs & APIs for Developers
+- Programmatic access to detection and event data
+- Build custom forensic or analytics applications on Luminar
+- Extensible endpoints for integration with existing workflows and platforms
 
 *Join us in revolutionizing crime intelligence through decentralized AI.*
 
